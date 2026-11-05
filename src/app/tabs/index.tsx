@@ -1,16 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router'; // 1. Importamos el router
-import NavegacionPersonalizada from './navegador';
+import NavegacionPersonalizada from '@/components/navegacion-personalizada';
+import { useSession } from '@/auth/context';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { ApiState, Pagination } from '@/components/api-state';
+import type { Collection, Provider } from '@/api/types';
 
 export default function HomeScreen() {
   const router = useRouter(); // 2. Inicializamos el router
 
-  // 3. Función para cerrar sesión
-  const cerrarSesion = () => {
-    router.replace('/login');
+  const { user, logout } = useSession();
+  const [closing, setClosing] = useState(false);
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const providers = useApiResource<Collection<Provider>>(`/providers?page=${page}&q=${encodeURIComponent(search)}`);
+  const cerrarSesion = async () => {
+    if (closing) return;
+    setClosing(true);
+    try { await logout(); } finally { setClosing(false); }
   };
 
   return (
@@ -24,22 +35,21 @@ export default function HomeScreen() {
               <Ionicons name="location-outline" size={20} color="#005b9f" />
             </View>
             <View style={styles.locationTextContainer}>
-              <Text style={styles.locationLabel}>TU UBICACIÓN</Text>
+              <Text style={styles.locationLabel}>TEKORA</Text>
               <View style={styles.locationSelector}>
-                <Text style={styles.locationValue}>Roma Norte, CDMX</Text>
-                <Ionicons name="chevron-down" size={16} color="#1a1a1a" />
+                <Text style={styles.locationValue}>Catálogo público</Text>
               </View>
             </View>
           </View>
           
           {/* Contenedor derecho para los iconos */}
           <View style={styles.headerRightIcons}>
-            <TouchableOpacity style={styles.bellButton}>
+            <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Notificaciones en preparación" style={[styles.bellButton, { opacity: 0.5 }]}>
               <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
             </TouchableOpacity>
             
             {/* Botón de Cerrar Sesión */}
-            <TouchableOpacity style={styles.logoutButton} onPress={cerrarSesion}>
+            <TouchableOpacity accessibilityLabel="Cerrar sesión" disabled={closing} style={styles.logoutButton} onPress={() => { void cerrarSesion(); }}>
               <Ionicons name="log-out-outline" size={24} color="#d9534f" />
             </TouchableOpacity>
           </View>
@@ -50,20 +60,26 @@ export default function HomeScreen() {
           <Ionicons name="search-outline" size={20} color="#888" style={styles.searchIcon} />
           <TextInput 
             style={styles.searchInput}
-            placeholder="¿Qué necesitas reparar?"
+            placeholder="Buscar expertos (pulsa buscar)"
             placeholderTextColor="#888"
+            value={query}
+            onChangeText={setQuery}
+            maxLength={120}
+            returnKeyType="search"
+            onSubmitEditing={() => { setSearch(query.trim()); setPage(1); }}
           />
+          <TouchableOpacity accessibilityLabel="Buscar expertos" onPress={() => { setSearch(query.trim()); setPage(1); }}><Ionicons name="arrow-forward" size={20} color="#005b9f" /></TouchableOpacity>
         </View>
 
         {/* Banner Promocional */}
         <View style={styles.banner}>
           <View style={styles.bannerContent}>
             <Text style={styles.bannerLogoText}>repara.</Text>
-            <Text style={styles.bannerGreeting}>Hola, Ana. Todo tiene solución.</Text>
+            <Text style={styles.bannerGreeting}>Hola, {user?.name}. Todo tiene solución.</Text>
             <Text style={styles.bannerTitle}>Tu hogar, en{'\n'}buenas manos.</Text>
             <View style={styles.bannerBadge}>
-            <Ionicons name="shield-checkmark" size={14} color="#005b9f" />              
-            <Text style={styles.bannerBadgeText}>Expertos verificados</Text>
+            <Ionicons name="people-outline" size={14} color="#005b9f" />
+            <Text style={styles.bannerBadgeText}>Conoce a los prestadores</Text>
             </View>
           </View>
           <View style={styles.bannerImagePlaceholder}>
@@ -73,44 +89,27 @@ export default function HomeScreen() {
         </View>
 
         {/* Sección de Categorías */}
-        <Text style={styles.sectionTitle}>¿Qué equipo falló?</Text>
+        <Text style={styles.sectionTitle}>Explora Tekora</Text>
         <View style={styles.categoriesContainer}>
-          <CategoryItem icon="snow-outline" label="Refris" isActive />
-          <CategoryItem icon="hardware-chip-outline" label="Microondas" />
-          <CategoryItem icon="laptop-outline" label="Cómputo" />
-          <CategoryItem icon="phone-portrait-outline" label="Celulares" />
-          <CategoryItem icon="home-outline" label="Hogar" />
+          <CategoryItem icon="build-outline" label="Servicios" isActive onPress={() => router.push('/tabs/servicios')} />
+          <CategoryItem icon="people-outline" label="Expertos" onPress={providers.retry} />
+          <CategoryItem icon="chatbubble-outline" label="Mensajes" onPress={() => router.push('/tabs/chat')} />
+          <CategoryItem icon="person-outline" label="Cuenta" onPress={() => router.push('/tabs/cuenta')} />
+          <CategoryItem icon="clipboard-outline" label="Publicar" onPress={() => router.push('/tabs/publicar')} />
         </View>
 
         {/* Sección de Expertos */}
         <View style={styles.expertsHeader}>
-          <Text style={styles.sectionTitle}>Expertos cerca de ti</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>Ver todos</Text>
+          <Text style={styles.sectionTitle}>Expertos publicados</Text>
+          <TouchableOpacity onPress={providers.retry}>
+            <Text style={styles.seeAllText}>Actualizar</Text>
           </TouchableOpacity>
         </View>
 
-        <ExpertCard 
-          name="Carlos Mendoza"
-          specialty="Refrigeradores"
-          experience="8 años"
-          rating="4.9"
-          distance="1.2 km"
-          availability="Mañana"
-          price="$350"
-          onPress={() => router.push('/tabs/perfil-experto')} 
-        />
-        
-        <ExpertCard 
-          name="Elena Ruiz"
-          specialty="Electrodomésticos"
-          experience="6 años"
-          rating="4.9"
-          distance="2.4 km"
-          availability="Mañana"
-          price="$390"
-          onPress={() => router.push('/tabs/perfil-experto')} 
-        />
+        <ApiState {...providers} empty={providers.data?.data.length === 0} />
+        {providers.data?.data.map(provider => <ExpertCard key={provider.id} provider={provider}
+          onPress={() => router.push({ pathname: '/tabs/perfil-experto', params: { id: provider.id } })} />)}
+        <Pagination meta={providers.data?.meta} onPage={setPage} />
 
       </ScrollView>
       <NavegacionPersonalizada />
@@ -118,8 +117,8 @@ export default function HomeScreen() {
   );
 }
 
-const CategoryItem = ({ icon, label, isActive = false }: { icon: any, label: string, isActive?: boolean }) => (
-  <TouchableOpacity style={styles.categoryItem}>
+const CategoryItem = ({ icon, label, isActive = false, onPress }: { icon: React.ComponentProps<typeof Ionicons>['name'], label: string, isActive?: boolean, onPress: () => void }) => (
+  <TouchableOpacity style={styles.categoryItem} onPress={onPress}>
     <View style={[styles.categoryIconContainer, isActive && styles.categoryIconActive]}>
       <Ionicons name={icon} size={28} color={isActive ? "#fff" : "#005b9f"} />
     </View>
@@ -127,25 +126,20 @@ const CategoryItem = ({ icon, label, isActive = false }: { icon: any, label: str
   </TouchableOpacity>
 );
 
-// Actualiza tu subcomponente ExpertCard así:
-const ExpertCard = ({ name, specialty, experience, rating, distance, availability, price, onPress }: { name: string, specialty: string, experience: string, rating: string, distance: string, availability: string, price: string, onPress?: () => void }) => (
+const ExpertCard = ({ provider, onPress }: { provider: Provider, onPress: () => void }) => (
   <TouchableOpacity style={styles.expertCard} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.expertAvatarPlaceholder}>
       <Ionicons name="person" size={30} color="#ccc" />
     </View>
     <View style={styles.expertInfo}>
       <View style={styles.expertNameRow}>
-        <Text style={styles.expertName}>{name}</Text>
-        <Ionicons name="checkmark-circle" size={16} color="#005b9f" style={{marginLeft: 4}} />
+        <Text style={styles.expertName}>{provider.display_name}</Text>
       </View>
-      <Text style={styles.expertSubtitle}>{specialty} · {experience}</Text>
-      <Text style={styles.expertDetails}>
-        <Ionicons name="star" size={12} color="#005b9f" /> {rating} · {distance} · {availability}
-      </Text>
+      <Text style={styles.expertSubtitle}>{provider.headline ?? 'Presentación no publicada'}</Text>
+      <Text style={styles.expertDetails} numberOfLines={2}>{provider.bio ?? 'Biografía no publicada'}</Text>
     </View>
     <View style={styles.expertPriceContainer}>
-      <Text style={styles.expertPrice}>{price}</Text>
-      <Text style={styles.expertPriceLabel}>MXN · diagnóstico</Text>
+      <Ionicons name="chevron-forward" size={20} color="#005b9f" />
     </View>
   </TouchableOpacity>
 );

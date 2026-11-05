@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import NavegacionPersonalizada from './navegador';
+import NavegacionPersonalizada from '@/components/navegacion-personalizada';
 import { useRouter } from 'expo-router';
+import { ApiState, Pagination } from '@/components/api-state';
+import { PreparationNotice } from '@/components/preparation-notice';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { modalityLabels, type Collection, type Service } from '@/api/types';
 
 
 export default function ServiciosScreen() {
-  const [tabActiva, setTabActiva] = useState('activos');
-    const router = useRouter();
+  const [tabActiva, setTabActiva] = useState('catalogo');
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const services = useApiResource<Collection<Service>>(`/services?page=${page}&q=${encodeURIComponent(search)}`);
+  const router = useRouter();
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       
       {/* Cabecera */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mis Servicios</Text>
-        <TouchableOpacity style={styles.iconButton}>
+        <Text style={styles.headerTitle}>Servicios</Text>
+        <TouchableOpacity accessibilityLabel="Actualizar catálogo" style={styles.iconButton} onPress={services.retry}>
           <Ionicons name="search-outline" size={24} color="#1a1a1a" />
         </TouchableOpacity>
       </View>
@@ -29,10 +37,10 @@ export default function ServiciosScreen() {
             <Text style={styles.boardTitle}>Tablero de Solicitudes</Text>
           </View>
           <Text style={styles.boardDescription}>
-            ¿No estás seguro de cuál es la falla? Describe el problema de tu equipo y deja que los expertos te envíen sus propuestas y cotizaciones.
+            La publicación de solicitudes está en preparación. Puedes conocer el formulario; todavía no se envían trabajos ni cotizaciones.
           </Text>
           <TouchableOpacity style={styles.boardButton} onPress={() => router.push('/tabs/publicar')}>
-                <Text style={styles.boardButtonText}>Publicar un trabajo</Text>
+                <Text style={styles.boardButtonText}>Ver formulario en preparación</Text>
                 <Ionicons name="arrow-forward" size={18} color="#002f5c" />
             </TouchableOpacity>
         </View>
@@ -40,10 +48,10 @@ export default function ServiciosScreen() {
         {/* Pestañas de Activos / Historial */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
-            style={[styles.tab, tabActiva === 'activos' && styles.tabActive]}
-            onPress={() => setTabActiva('activos')}
+            style={[styles.tab, tabActiva === 'catalogo' && styles.tabActive]}
+            onPress={() => setTabActiva('catalogo')}
           >
-            <Text style={[styles.tabText, tabActiva === 'activos' && styles.tabTextActive]}>Activos (2)</Text>
+            <Text style={[styles.tabText, tabActiva === 'catalogo' && styles.tabTextActive]}>Catálogo público</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -54,41 +62,18 @@ export default function ServiciosScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Lista de Servicios (Simulación de contenido) */}
-        {tabActiva === 'activos' ? (
+        {tabActiva === 'catalogo' ? (
           <>
-            <ServiceCard 
-              folio="RP-1248"
-              device="Refrigerador Mabe"
-              problem="La parte de abajo no enfría"
-              status="Técnico confirmado"
-              techName="Carlos Mendoza"
-              date="12 Nov · 10:00 - 12:00 h"
-              statusColor="#005b9f"
-            />
-            <ServiceCard 
-              folio="LV-0932"
-              device="Lavadora Whirlpool"
-              problem="Hace ruido al exprimir"
-              status="Esperando propuestas"
-              techName="Buscando experto..."
-              date="Sin fecha asignada"
-              statusColor="#FFBA08"
-              isPending
-            />
+            <View style={styles.searchRow}>
+              <TextInput style={styles.searchInput} accessibilityLabel="Buscar servicios" placeholder="Buscar servicios" value={query} onChangeText={setQuery} maxLength={120} returnKeyType="search" onSubmitEditing={() => { setSearch(query.trim()); setPage(1); }} />
+              <TouchableOpacity accessibilityLabel="Buscar servicios" onPress={() => { setSearch(query.trim()); setPage(1); }}><Ionicons name="search-outline" size={24} color="#005b9f" /></TouchableOpacity>
+            </View>
+            <ApiState {...services} empty={services.data?.data.length === 0} />
+            {services.data?.data.map(service => <ServiceCard key={service.id} service={service} onPress={() => router.push({ pathname: '/tabs/detalle-servicio', params: { id: service.id } })} />)}
+            <Pagination meta={services.data?.meta} onPage={setPage} />
           </>
         ) : (
-          <>
-            <ServiceCard 
-              folio="MC-0105"
-              device="Microondas LG"
-              problem="No calienta la comida"
-              status="Completado"
-              techName="Elena Ruiz"
-              date="05 Oct · 14:00 h"
-              statusColor="#009688"
-            />
-          </>
+          <PreparationNotice>El historial de solicitudes y citas aún no está disponible. Aquí no se muestran reservas confirmadas.</PreparationNotice>
         )}
 
       </ScrollView>
@@ -99,36 +84,32 @@ export default function ServiciosScreen() {
   );
 }
 
-// Subcomponente para la Tarjeta de Servicio
-// Modifica el subcomponente ServiceCard así:
-const ServiceCard = ({ folio, device, problem, status, techName, date, statusColor, isPending = false }: any) => {
-  const router = useRouter(); // Necesario para navegar
+const ServiceCard = ({ service, onPress }: { service: Service; onPress: () => void }) => {
   
   return (
     <TouchableOpacity 
       style={styles.serviceCard} 
-      onPress={() => router.push('/tabs/detalle-servicio')} 
+      onPress={onPress}
       activeOpacity={0.7}
     >
       <View style={styles.serviceHeader}>
-        <Text style={styles.serviceFolio}>Folio: {folio}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusText, { color: statusColor }]}>{status}</Text>
+        <Text style={styles.serviceFolio}>{service.category.name}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: '#005b9f15' }]}>
+          <Text style={[styles.statusText, { color: '#005b9f' }]}>{modalityLabels[service.modality]}</Text>
         </View>
       </View>
       
-      <Text style={styles.deviceTitle}>{device}</Text>
-      <Text style={styles.problemText}>"{problem}"</Text>
+      <Text style={styles.deviceTitle}>{service.title}</Text>
+      <Text style={styles.problemText} numberOfLines={3}>{service.description}</Text>
       
       <View style={styles.serviceFooter}>
         <View style={styles.footerRow}>
-          <Ionicons name={isPending ? "search-outline" : "person-outline"} size={16} color="#666" />
-          <Text style={styles.footerText}>{techName}</Text>
+          <Ionicons name="person-outline" size={16} color="#666" />
+          <Text style={styles.footerText}>{service.provider.display_name}</Text>
         </View>
         <View style={styles.footerRow}>
-          <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={styles.footerText}>{date}</Text>
+          <Ionicons name="information-circle-outline" size={16} color="#666" />
+          <Text style={styles.footerText}>Ver detalle público</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -136,6 +117,8 @@ const ServiceCard = ({ folio, device, problem, status, techName, date, statusCol
 };
 
 const styles = StyleSheet.create({
+  searchRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, backgroundColor: '#fff', marginBottom: 16 },
+  searchInput: { flex: 1, color: '#333', fontSize: 15, padding: 4 },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#fff' },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a' },

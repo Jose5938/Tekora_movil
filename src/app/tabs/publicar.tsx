@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { PreparationNotice } from '@/components/preparation-notice';
 
 export default function PublicarSolicitudScreen() {
   const router = useRouter();
-  const [categoriaSel, setCategoriaSel] = useState('');
+  const categoriaSel = '';
 
   const categorias = [
     { id: 'refris', label: 'Refrigerador', icon: 'snow-outline' },
@@ -29,9 +30,10 @@ export default function PublicarSolicitudScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <PreparationNotice>Vista previa del formulario. La publicación está deshabilitada y no se guardan ni envían solicitudes, fotos o direcciones.</PreparationNotice>
           
           <Text style={styles.pageDescription}>
-            Describe el problema detalladamente. Mientras más información des, mejores cotizaciones recibirás de los expertos.
+            Puedes conocer el diseño del formulario. Los campos y categorías son de demostración; todavía no se reciben cotizaciones.
           </Text>
 
           <Text style={styles.sectionLabel}>¿Qué equipo presenta la falla?</Text>
@@ -40,7 +42,7 @@ export default function PublicarSolicitudScreen() {
               <TouchableOpacity 
                 key={cat.id}
                 style={[styles.categoryChip, categoriaSel === cat.id && styles.categoryChipActive]}
-                onPress={() => setCategoriaSel(cat.id)}
+                disabled
               >
                 <Ionicons 
                   name={cat.icon as any} 
@@ -57,6 +59,7 @@ export default function PublicarSolicitudScreen() {
 
           <Text style={styles.sectionLabel}>Título corto de la falla</Text>
           <TextInput 
+            editable={false}
             style={styles.input}
             placeholder="Ej. Mi lavadora Whirlpool no exprime"
             placeholderTextColor="#999"
@@ -64,6 +67,7 @@ export default function PublicarSolicitudScreen() {
 
           <Text style={styles.sectionLabel}>Descripción detallada</Text>
           <TextInput 
+            editable={false}
             style={[styles.input, styles.textArea]}
             placeholder="Menciona la marca, modelo si lo sabes, y los síntomas exactos del problema..."
             placeholderTextColor="#999"
@@ -72,17 +76,17 @@ export default function PublicarSolicitudScreen() {
           />
 
           <Text style={styles.sectionLabel}>Fotos o evidencia (Opcional)</Text>
-          <TouchableOpacity style={styles.uploadBox}>
+          <TouchableOpacity accessibilityRole="button" disabled style={styles.uploadBox}>
             <Ionicons name="camera-outline" size={32} color="#005b9f" style={{ marginBottom: 8 }} />
             <Text style={styles.uploadText}>Toma una foto o sube desde la galería</Text>
           </TouchableOpacity>
 
           <Text style={styles.sectionLabel}>Ubicación del servicio</Text>
-          <TouchableOpacity style={styles.locationSelector}>
+          <TouchableOpacity accessibilityRole="button" disabled style={styles.locationSelector}>
             <Ionicons name="location" size={20} color="#005b9f" />
             <View style={styles.locationInfo}>
-              <Text style={styles.locationTitle}>Roma Norte, CDMX</Text>
-              <Text style={styles.locationSubtitle}>Colima 145, Int. 4</Text>
+              <Text style={styles.locationTitle}>Ubicación en preparación</Text>
+              <Text style={styles.locationSubtitle}>Sin dirección seleccionada</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
@@ -90,8 +94,8 @@ export default function PublicarSolicitudScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.submitButton} onPress={() => router.back()}>
-            <Text style={styles.submitButtonText}>Publicar en el Tablero</Text>
+          <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.submitButton, { opacity: 0.5 }]}>
+            <Text style={styles.submitButtonText}>Publicación en preparación</Text>
             <Ionicons name="checkmark-circle-outline" size={20} color="#002f5c" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
         </View>

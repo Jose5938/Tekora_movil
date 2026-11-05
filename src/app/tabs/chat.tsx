@@ -1,22 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter,useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { PreparationNotice } from '@/components/preparation-notice';
+import NavegacionPersonalizada from '@/components/navegacion-personalizada';
 
 export default function ChatScreen() {
-    const { autoMsg } = useLocalSearchParams();
-    const [mensajeActual, setMensajeActual] = useState(autoMsg ? String(autoMsg) : '');
   const router = useRouter();
-
-  // Arreglo con los mensajes de prueba
   const messages = [
-    { id: '1', sender: 'tech', text: 'Hola, Ana. Soy Carlos, tu técnico. ¿El congelador sí está enfriando?', time: '09:32' },
-    { id: '2', sender: 'user', text: 'Hola, Carlos. Sí, el congelador funciona; la parte de abajo no enfría.', time: '09:34' },
-    { id: '3', sender: 'tech', text: 'Gracias. Nos vemos el jueves 12, entre 10:00 y 12:00 h. El diagnóstico cuesta $350 MXN.', time: '09:35' },
-    { id: '4', sender: 'user', text: 'Perfecto, te espero en Colima 145, int. 4. El timbre dice López.', time: '09:37' },
-    { id: '5', sender: 'tech', text: 'Cita confirmada. Te aviso cuando vaya en camino. ¡Hasta mañana!', time: '09:38' },
-    { id: '6', sender: 'user', text: '¡Gracias! Nos vemos mañana.', time: '09:40' },
+    { id: '1', sender: 'tech', text: 'Mensaje de ejemplo del prestador.', time: 'Ejemplo' },
+    { id: '2', sender: 'user', text: 'Mensaje de ejemplo del solicitante.', time: 'Ejemplo' },
   ];
 
   return (
@@ -33,10 +27,10 @@ export default function ChatScreen() {
           </View>
           
           <View style={styles.headerInfo}>
-            <Text style={styles.techName}>Carlos Mendoza</Text>
+            <Text style={styles.techName}>Chat de demostración</Text>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.statusText}>En línea · Técnico verificado</Text>
+              <Text style={styles.statusText}>Mensajería en preparación</Text>
             </View>
           </View>
           {/* Se omitió el icono de llamada como solicitaste */}
@@ -50,15 +44,16 @@ export default function ChatScreen() {
         >
           <Ionicons name="calendar-outline" size={24} color="#005b9f" style={styles.bannerIcon} />
           <View style={styles.bannerInfo}>
-            <Text style={styles.bannerTitle}>Diagnóstico de refrigerador · RP-1248</Text>
-            <Text style={styles.bannerDetails}>12 nov · 10:00–12:00 h · $350 MXN</Text>
+            <Text style={styles.bannerTitle}>Reservas en preparación</Text>
+            <Text style={styles.bannerDetails}>Ver vista previa, sin cita confirmada</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#005b9f" />
         </TouchableOpacity>
 
+        <PreparationNotice>La mensajería aún no está disponible. Esta es una conversación de ejemplo; no permite enviar mensajes ni confirmar citas.</PreparationNotice>
         {/* Área de Mensajes */}
         <ScrollView contentContainerStyle={styles.chatScroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.dateSeparator}>MIÉRCOLES, 11 DE NOVIEMBRE</Text>
+          <Text style={styles.dateSeparator}>CONVERSACIÓN DE EJEMPLO</Text>
 
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
@@ -81,33 +76,33 @@ export default function ChatScreen() {
 
           <View style={styles.securityNote}>
             <Ionicons name="shield-checkmark-outline" size={14} color="#888" />
-            <Text style={styles.securityText}>Por tu seguridad, acuerda todo desde Tekora.</Text>
+            <Text style={styles.securityText}>Estos mensajes son ejemplos. No se han enviado.</Text>
           </View>
         </ScrollView>
 
       {/* Input para escribir mensaje */}
         <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.attachButton}>
+          <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Adjuntos en preparación" style={[styles.attachButton, { opacity: 0.5 }]}>
             <Ionicons name="add" size={28} color="#005b9f" />
           </TouchableOpacity>
           
           <View style={styles.textInputWrapper}>
             <TextInput 
               style={styles.textInput}
-              value={mensajeActual}               
-              onChangeText={setMensajeActual}     
-              placeholder="Escribe un mensaje..."
+              editable={false}
+              placeholder="Mensajería en preparación"
               placeholderTextColor="#999"
               multiline
             />
           </View>
 
-          <TouchableOpacity style={styles.sendButton}>
+          <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Envío en preparación" accessibilityState={{ disabled: true }} style={[styles.sendButton, { opacity: 0.5 }]}>
             <Ionicons name="arrow-up" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
       </KeyboardAvoidingView>
+      <NavegacionPersonalizada />
     </SafeAreaView>
   );
 }
@@ -123,7 +118,7 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1 },
   techName: { fontSize: 16, fontWeight: 'bold', color: '#002f5c', marginBottom: 2 },
   statusRow: { flexDirection: 'row', alignItems: 'center' },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#009688', marginRight: 6 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#999', marginRight: 6 },
   statusText: { fontSize: 12, color: '#009688', fontWeight: '500' },
   
   // Banner
@@ -159,7 +154,7 @@ const styles = StyleSheet.create({
   securityText: { fontSize: 11, color: '#888', marginLeft: 6 },
   
   // Input
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  inputContainer: { marginBottom: 80, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   attachButton: { padding: 4, marginRight: 8 },
   textInputWrapper: { flex: 1, backgroundColor: '#f5f7f9', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 8, maxHeight: 100 },
   textInput: { fontSize: 15, color: '#333', maxHeight: 80 },

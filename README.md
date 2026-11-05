@@ -1,3 +1,5 @@
+> Integración móvil Etapa 10A: [ejecución Windows/LAN y alcance](docs/ETAPA-10A.md), [validación y pendientes](docs/VALIDACION-10A.md).
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
