@@ -1,8 +1,10 @@
 # Validación de Etapa 10A
 
+Este informe conserva los resultados originales de la integración. La revisión posterior del ejecutor para Node 22/24 y de las vulnerabilidades, con los comandos repetidos y las cifras actuales, está en [SEGURIDAD-10A.md](SEGURIDAD-10A.md).
+
 Ejecutada el 5 de noviembre de 2026 en Linux, Node **24.22.1**, npm **11.9.0**, Expo SDK **58**. Código móvil en `codex/tekora-movil-etapa-10a`; base `ddc4d4e0815ac18152b1ed36278fe1d317a25edc`. El SHA final y la URL se registran en la entrega del PR.
 
-## Resultados ejecutados
+## Resultados originales ejecutados
 
 | Comando/control | Resultado |
 | --- | --- |
@@ -42,7 +44,7 @@ No se presenta como una verificación completa. Repetir `npx.cmd expo-doctor` en
 
 ## Cobertura automatizada
 
-`npm test` compila el núcleo TypeScript HTTP/sesión a una carpeta temporal y ejecuta `node:test` con `--test-isolation=none`. Esta opción permite informar y ejecutar los subtests en el Node 24 del entorno. No requiere una base de datos, credenciales reales ni un servidor remoto.
+`npm test` compila el núcleo TypeScript HTTP/sesión a una carpeta temporal. El ejecutor actual carga cada archivo de pruebas directamente con Node, que ejecuta `node:test`, sin argumentos específicos de versión. Sustituye el uso original de `--test-isolation=none`, incompatible con Node 22.13.0. Se verificaron 29/29 en Node 22.13.0 y Node 24.22.1; ver [revisión del ejecutor](SEGURIDAD-10A.md#ejecutor-de-pruebas). No requiere una base de datos, credenciales reales ni un servidor remoto.
 
 Las 29 pruebas verifican: login correcto e incorrecto; cuerpo y Bearer según operación; doble pulsación; contexto global de fetch; expiración durante guardado; restauración bloqueada hasta `/me`; expiración al abrir y con sesión activa; expiración mientras llega `/me`; 401 JSON y no JSON; revocación durante sesión; logout y logout sin conexión; acceso sin token; catálogo público vacío; 404; interpretación de 401/403/404/409/422/429 y campos/Retry-After; pérdida de conexión y reintento; permisos revocados; revalidación; credencial corrupta; fallos al guardar o borrar de almacenamiento seguro; deduplicación de GET y separación de POST distintos; configuración inválida; IDs de navegación; ausencia de logs y almacenamiento inseguro en código de autenticación.
 

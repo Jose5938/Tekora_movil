@@ -1,0 +1,110 @@
+{
+  "startingCommit": "fd672e51f2f7fd76b1e7c16341d96f4f40e2bbf4",
+  "rootManifestUnchanged": true,
+  "sourceAndTestsUnchanged": true,
+  "versionChanges": [
+    {
+      "package": "@expo/cli",
+      "before": "58.1.18",
+      "after": "58.1.19",
+      "path": "node_modules/@expo/cli"
+    },
+    {
+      "package": "@expo/config",
+      "before": "58.0.10",
+      "after": "58.0.11",
+      "path": "node_modules/@expo/config"
+    },
+    {
+      "package": "@expo/config-plugins",
+      "before": "58.0.11",
+      "after": "58.0.12",
+      "path": "node_modules/@expo/config-plugins"
+    },
+    {
+      "package": "@expo/env",
+      "before": "2.5.3",
+      "after": "2.5.4",
+      "path": "node_modules/@expo/env"
+    },
+    {
+      "package": "@expo/inline-modules",
+      "before": "0.2.8",
+      "after": "0.2.9",
+      "path": "node_modules/@expo/inline-modules"
+    },
+    {
+      "package": "@expo/log-box",
+      "before": "58.0.14",
+      "after": "58.0.15",
+      "path": "node_modules/@expo/log-box"
+    },
+    {
+      "package": "@expo/metro-config",
+      "before": "58.0.20",
+      "after": "58.0.21",
+      "path": "node_modules/@expo/metro-config"
+    },
+    {
+      "package": "@expo/metro-runtime",
+      "before": "58.0.16",
+      "after": "58.0.17",
+      "path": "node_modules/@expo/metro-runtime"
+    },
+    {
+      "package": "@expo/prebuild-config",
+      "before": "58.0.18",
+      "after": "58.0.19",
+      "path": "node_modules/@expo/prebuild-config"
+    },
+    {
+      "package": "@expo/router-server",
+      "before": "58.0.20",
+      "after": "58.0.21",
+      "path": "node_modules/@expo/router-server"
+    },
+    {
+      "package": "expo-constants",
+      "before": "58.0.14",
+      "after": "58.0.15",
+      "path": "node_modules/expo-constants"
+    },
+    {
+      "package": "expo-modules-autolinking",
+      "before": "58.0.16",
+      "after": "58.0.17",
+      "path": "node_modules/expo-modules-autolinking"
+    },
+    {
+      "package": "shell-quote",
+      "before": "1.10.0",
+      "after": "1.12.0",
+      "path": "node_modules/shell-quote"
+    }
+  ],
+  "addedPackagePaths": [
+    "node_modules/@expo/cli",
+    "node_modules/@expo/cli/node_modules/@expo/ws-tunnel",
+    "node_modules/@expo/cli/node_modules/accepts",
+    "node_modules/@expo/cli/node_modules/mime-db",
+    "node_modules/@expo/cli/node_modules/mime-types",
+    "node_modules/@expo/cli/node_modules/negotiator",
+    "node_modules/@expo/cli/node_modules/semver",
+    "node_modules/@expo/cli/node_modules/ws",
+    "node_modules/@expo/router-server",
+    "node_modules/ci-info"
+  ],
+  "removedPackagePaths": [
+    "node_modules/expo/node_modules/@expo/cli",
+    "node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server",
+    "node_modules/expo/node_modules/@expo/ws-tunnel",
+    "node_modules/expo/node_modules/accepts",
+    "node_modules/expo/node_modules/ci-info",
+    "node_modules/expo/node_modules/mime-db",
+    "node_modules/expo/node_modules/mime-types",
+    "node_modules/expo/node_modules/negotiator",
+    "node_modules/expo/node_modules/semver",
+    "node_modules/expo/node_modules/ws",
+    "node_modules/jest-util/node_modules/ci-info"
+  ]
+}

@@ -1,0 +1,46 @@
+
+> tekora_movil@1.0.0 test
+> node scripts/test-api.cjs
+
+✔ login real: POST exacto, guarda solo credencial y expone identidad (106.938416ms)
+✔ login incorrecto 401 no crea ni guarda sesión (2.055215ms)
+✔ doble pulsación de login produce una sola petición y un guardado (0.696703ms)
+✔ transporte predeterminado conserva el contexto global de fetch (4.801073ms)
+✔ no inicia sesión si la credencial expira durante el guardado seguro (0.87993ms)
+✔ restauración mantiene checking hasta /me y usa su identidad actual (8.426913ms)
+✔ credencial expirada al abrir: elimina sin llamar al servidor (0.240444ms)
+✔ expiración con app abierta elimina token y cierra acceso privado (4.888135ms)
+✔ no restaura identidad si expira mientras /me está pendiente (0.887951ms)
+✔ revocación 401 (json) elimina token incluso sin JSON (0.972479ms)
+✔ revocación 401 (html) elimina token incluso sin JSON (0.68794ms)
+✔ 401 de una operación protegida durante sesión también cierra acceso (42.323595ms)
+✔ logout llama al servidor con Bearer, revoca y elimina localmente (1.179572ms)
+✔ logout sin conexión: cierra localmente e informa revocación no confirmada (5.137973ms)
+✔ acceso sin token no transmite peticiones protegidas (0.308155ms)
+✔ catálogo público y listas vacías no envían Bearer aunque haya sesión (1.020532ms)
+✔ servicio inexistente 404 conserva sesión y expone código de error (0.744144ms)
+✔ errores 401/403/404/409/422/429 interpretan code/message/fields y Retry-After (6.205897ms)
+✔ pérdida de conexión bloquea restauración; reintento usa /me sin acceso intermedio (0.594519ms)
+✔ 403 por permisos revocados bloquea y borra sesión (9.90804ms)
+✔ revalidación al volver a primer plano detecta revocación (0.876004ms)
+✔ JSON corrupto o credencial inválida se elimina sin restaurar (6.935849ms)
+✔ fallo al guardar en almacenamiento seguro intenta revocar y no abre sesión (0.895563ms)
+✔ fallo al borrar almacenamiento bloquea acceso y reintenta borrado (0.602531ms)
+✔ cliente combina GET concurrentes; libera petición al terminar para reintento (0.436239ms)
+✔ cliente no combina POST con cuerpos diferentes al mismo endpoint (0.494858ms)
+✔ rechaza configuración ausente y URL con credenciales sin exponerlas (0.445343ms)
+✔ IDs de navegación solo aceptan enteros positivos seguros (0.233092ms)
+✔ código de autenticación no registra credenciales ni usa almacenamiento inseguro (1.031038ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 255.26149
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice

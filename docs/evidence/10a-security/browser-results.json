@@ -1,0 +1,111 @@
+{
+  "results": [
+    "Acceso directo privado sin sesión redirige a login sin identidad privada.",
+    "Validación local y errores 401, 422 y 429 del formulario.",
+    "Login correcto; inicio con identidad y prestadores del contrato; sin token persistido en navegador.",
+    "Perfil obtiene /providers/7; solicitar muestra explicación sin enviar operación.",
+    "Catálogo y detalle usan IDs reales /services/21 y muestran solo campos respaldados.",
+    "404, catálogo vacío, pérdida de conexión y reintentos visibles.",
+    "Chat/reserva/pago bloquean operaciones; cuenta usa identidad real; logout envía POST Bearer.",
+    "Expiración con pantalla abierta vuelve a login.",
+    "Recargar vista web exige login, sin almacenamiento inseguro."
+  ],
+  "requests": [
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "hasBearer": false
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "hasBearer": false
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "hasBearer": false
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "hasBearer": false
+    },
+    {
+      "path": "/providers",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/providers/7",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services/21",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services/21",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services/21",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/services",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/auth/logout",
+      "method": "POST",
+      "hasBearer": true
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "hasBearer": false
+    },
+    {
+      "path": "/providers",
+      "method": "GET",
+      "hasBearer": false
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "hasBearer": false
+    },
+    {
+      "path": "/providers",
+      "method": "GET",
+      "hasBearer": false
+    }
+  ],
+  "consolePageErrors": []
+}

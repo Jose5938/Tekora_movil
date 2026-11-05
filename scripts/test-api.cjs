@@ -8,11 +8,21 @@ let status = 1;
 try {
   const compiled = spawnSync(process.execPath, [require.resolve('typescript/bin/tsc'), '-p', 'tests/tsconfig.json', '--outDir', build], { stdio: 'inherit' });
   if (compiled.status === 0) {
-    const files = readdirSync('tests').filter(name => name.endsWith('.test.cjs')).map(name => join('tests', name));
-    const tests = spawnSync(process.execPath, ['--test', '--test-isolation=none', ...files], {
-      stdio: 'inherit', env: { ...process.env, TEKORA_TEST_BUILD: build },
-    });
-    status = tests.status ?? 1;
+    const files = readdirSync('tests').filter(name => name.endsWith('.test.cjs')).sort();
+    if (files.length === 0) throw new Error('No test files found in tests/');
+    status = 0;
+    for (const file of files) {
+      // node:test runs and reports tests when a file is executed directly.
+      // Each file has its own process on Node 22 and 24, without version-specific flags.
+      const tests = spawnSync(process.execPath, [join('tests', file)], {
+        stdio: 'inherit', env: { ...process.env, TEKORA_TEST_BUILD: build },
+      });
+      if (tests.error) console.error(tests.error.message);
+      if (tests.status !== 0) {
+        status = tests.status ?? 1;
+        break;
+      }
+    }
   }
 } finally { rmSync(build, { recursive: true, force: true }); }
 process.exitCode = status;

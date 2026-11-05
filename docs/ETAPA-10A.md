@@ -2,6 +2,8 @@
 
 Integración de la interfaz Expo existente con la API Laravel. Rama `codex/tekora-movil-etapa-10a`, base `master`, SHA inicial `ddc4d4e0815ac18152b1ed36278fe1d317a25edc`. La entrega permanece en PR borrador para revisión independiente de ChatGPT y aprobación del usuario; no autoriza fusionar ni desplegar.
 
+La revisión posterior de compatibilidad Node 22/24, actualización de dependencias y auditorías residuales está en [SEGURIDAD-10A.md](SEGURIDAD-10A.md).
+
 ## Contrato y alcance
 
 Se consultó [OpenAPI del backend](https://github.com/Fernando261/tekora-project/blob/1f0926ca9fc0bf2c70a34c1e64af0b98a31d6957/docs/api/openapi.json), fijado al SHA `1f0926ca9fc0bf2c70a34c1e64af0b98a31d6957`. No se modificó Laravel. Se conservan las pantallas, sus estilos, tarjetas y navegación inferior. Los atajos del inicio sustituyen categorías ficticias por accesos a funciones de la app; Servicios conserva las tarjetas y cambia la lista ficticia de citas por el catálogo público.
@@ -42,7 +44,7 @@ No hay refresh token. La revocación del lado servidor se detecta en la siguient
 | `eslint ^9.39.5` (desarrollo) | El repo no tenía lint instalado; necesario para `npx expo lint` |
 | `eslint-config-expo ~58.0.4` (desarrollo) | Reglas compatibles con el SDK y configuración plana |
 
-Se usó `npx expo install` para las incorporaciones. La API de compatibilidad de Expo no estaba accesible, por lo que la instalación final usó `EXPO_OFFLINE=1` y el mapa local del SDK. npm sí tuvo acceso a su registro. El lockfile añade las dependencias y metadatos correspondientes; ninguna entrada preexistente cambia de versión.
+En la integración inicial se usó `npx expo install` para las incorporaciones. La API de compatibilidad de Expo no estaba accesible, por lo que esa instalación usó `EXPO_OFFLINE=1` y el mapa local del SDK. npm sí tuvo acceso a su registro. La revisión de seguridad posterior actualiza las resoluciones transitivas compatibles de shell-quote y paquetes Expo sin cambiar `package.json`; sus versiones y justificaciones están en [SEGURIDAD-10A.md](SEGURIDAD-10A.md).
 
 Se corrigieron incompatibilidades previas de TypeScript en los ejemplos: `useColorScheme()` puede devolver null y no devuelve `unspecified`; el prop `ref` heredado del tipo de ejemplo de pestañas web no coincide con el de Pressable. La hidratación del tema web usa `useSyncExternalStore`, conservando el tema claro en render estático. No se cambió la versión de Expo, React, React Native ni Router, ni se crearon directorios nativos.
 
@@ -54,7 +56,7 @@ Documentación oficial consultada antes de modificar librerías o navegación:
 
 ## Ejecutar en Windows / Expo
 
-Usar Node 24 LTS, npm y Git. En un clon independiente del repositorio móvil:
+Usar Node 22.13.0 o Node 24.22.1, npm y Git. El ejecutor de pruebas se verificó con ambas versiones. En un clon independiente del repositorio móvil:
 
 ```powershell
 git clone --branch codex/tekora-movil-etapa-10a https://github.com/Jose5938/Tekora_movil.git Tekora-movil-10a
@@ -71,6 +73,8 @@ EXPO_PUBLIC_API_BASE_URL=http://IP_LOCAL_DEL_EQUIPO:8013/api/v1
 ```
 
 Esta variable solo contiene una dirección pública de configuración. No introducir tokens, contraseñas, claves Laravel ni secretos. `.env.local` está ignorado por Git. Reiniciar Metro tras editarla:
+
+En un clon nuevo sin `expo-env.d.ts`, ejecutar primero `npx.cmd expo start --offline` y detener con Ctrl+C cuando Expo genere los tipos locales. No editar ni versionar ese archivo ni `.expo/types`; son necesarios para el chequeo de TypeScript.
 
 ```powershell
 npx.cmd tsc --noEmit
