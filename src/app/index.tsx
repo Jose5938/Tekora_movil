@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
+import { useSession } from '@/auth/context';
 
 export default function Index() {
-  // Redirige automáticamente a la carpeta tabs apenas se abre la app
-  return <Redirect href="/login" />; 
+  const { status } = useSession();
+  return <Redirect href={status === 'authenticated' ? '/tabs' : '/login'} />;
 }

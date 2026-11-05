@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { PreparationNotice } from '@/components/preparation-notice';
 
-export default function ReservaConfirmadaScreen() {
+export default function ReservaPreviewScreen() {
   const router = useRouter();
-  const [modalPagoVisible, setModalPagoVisible] = useState(false);
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -23,6 +24,7 @@ export default function ReservaConfirmadaScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <PreparationNotice>Las reservas están en preparación. No tienes una cita confirmada en esta pantalla y no se ha enviado ninguna solicitud.</PreparationNotice>
         
         {/* Héroe: Icono y Mensaje de Éxito */}
         <View style={styles.heroSection}>
@@ -31,12 +33,12 @@ export default function ReservaConfirmadaScreen() {
           </View>
           
           <View style={styles.badge}>
-            <Ionicons name="checkmark" size={14} color="#005b9f" />
-            <Text style={styles.badgeText}>RESERVA CONFIRMADA</Text>
+            <Ionicons name="time-outline" size={14} color="#005b9f" />
+            <Text style={styles.badgeText}>RESERVAS EN PREPARACIÓN</Text>
           </View>
           
-          <Text style={styles.title}>Listo, Ana. Nos vemos.</Text>
-          <Text style={styles.subtitle}>Carlos ya tiene los detalles. Tu refrigerador está en buenas manos.</Text>
+          <Text style={styles.title}>Tu próxima reserva</Text>
+          <Text style={styles.subtitle}>Aquí podrás consultar los detalles cuando las reservas estén disponibles.</Text>
         </View>
 
         {/* Tarjeta de Detalles */}
@@ -46,10 +48,10 @@ export default function ReservaConfirmadaScreen() {
           <View style={styles.techProfileRow}>
             <View style={styles.techAvatar}><Ionicons name="person" size={24} color="#ccc" /></View>
             <View style={styles.techInfo}>
-              <Text style={styles.techName}>Carlos Mendoza</Text>
-              <Text style={styles.techRole}>Especialista en refrigeración</Text>
+              <Text style={styles.techName}>Sin prestador asignado</Text>
+              <Text style={styles.techRole}>Sin servicio reservado</Text>
             </View>
-            <Ionicons name="checkmark-circle" size={24} color="#008bb5" />
+            <Ionicons name="person-outline" size={24} color="#008bb5" />
           </View>
 
           <View style={styles.divider} />
@@ -60,8 +62,8 @@ export default function ReservaConfirmadaScreen() {
               <Ionicons name="calendar-outline" size={20} color="#005b9f" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Jueves 12 de noviembre de 2026</Text>
-              <Text style={styles.detailSub}>Entre 10:00 y 12:00 h</Text>
+              <Text style={styles.detailLabel}>Fecha sin confirmar</Text>
+              <Text style={styles.detailSub}>Horario sin confirmar</Text>
             </View>
           </View>
 
@@ -70,8 +72,8 @@ export default function ReservaConfirmadaScreen() {
               <Ionicons name="hardware-chip-outline" size={20} color="#005b9f" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Diagnóstico de refrigerador</Text>
-              <Text style={styles.detailSub}>Samsung · No enfría en la parte inferior</Text>
+              <Text style={styles.detailLabel}>Servicio sin seleccionar</Text>
+              <Text style={styles.detailSub}>Sin detalles de solicitud</Text>
             </View>
           </View>
 
@@ -80,8 +82,8 @@ export default function ReservaConfirmadaScreen() {
               <Ionicons name="location-outline" size={20} color="#005b9f" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Colima 145, int. 4</Text>
-              <Text style={styles.detailSub}>Roma Norte, Cuauhtémoc, CDMX</Text>
+              <Text style={styles.detailLabel}>Dirección sin seleccionar</Text>
+              <Text style={styles.detailSub}>Sin ubicación de reserva</Text>
             </View>
           </View>
         </View>
@@ -90,11 +92,11 @@ export default function ReservaConfirmadaScreen() {
         <View style={styles.priceCard}>
           <View>
             <Text style={styles.priceTitle}>Total de la visita</Text>
-            <Text style={styles.priceSub}>Reserva RP-1248</Text>
+            <Text style={styles.priceSub}>Sin reserva creada</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.priceAmount}>$350 MXN</Text>
-            <Text style={styles.priceSub}>Pago protegido</Text>
+            <Text style={styles.priceAmount}>— MXN</Text>
+            <Text style={styles.priceSub}>Sin cobro</Text>
           </View>
         </View>
 
@@ -102,40 +104,16 @@ export default function ReservaConfirmadaScreen() {
 
       {/* Botones Fijos Inferiores */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
-          <Text style={styles.primaryButtonText}>Conversar con Carlos</Text>
+        <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.primaryButton, { opacity: 0.5 }]}>
+          <Text style={styles.primaryButtonText}>Chat en preparación</Text>
           <Ionicons name="chatbubble-outline" size={18} color="#fff" style={{ marginLeft: 8 }} />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.secondaryLink} onPress={() => setModalPagoVisible(true)}>
+        <TouchableOpacity accessibilityRole="button" style={styles.secondaryLink} onPress={() => router.push('/tabs/pago')}>
           <Ionicons name="shield-checkmark" size={16} color="#0073B4" style={{ marginRight: 6 }} />
-          <Text style={styles.secondaryLinkText}>Proceder con el pago</Text>
+          <Text style={styles.secondaryLinkText}>Ver vista previa de pagos</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Modal de Leyenda de Pago Seguro */}
-      <Modal animationType="fade" transparent={true} visible={modalPagoVisible} onRequestClose={() => setModalPagoVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            
-            <View style={styles.modalIconCircle}>
-              <Ionicons name="lock-closed" size={32} color="#005b9f" />
-            </View>
-            
-            <Text style={styles.modalTitle}>Pago Seguro Tekora</Text>
-            <Text style={styles.modalText}>
-              Tu dinero se <Text style={{fontWeight: 'bold'}}>congela de manera segura</Text>. Solo se le liberará al técnico hasta que el trabajo esté finalizado y ambas partes estén de acuerdo.
-            </Text>
-            <Text style={styles.modalTextSub}>
-              Si el servicio no se concreta o hay un inconveniente, tu dinero será reembolsado.
-            </Text>
-
-           <TouchableOpacity style={styles.modalButton} onPress={() => {setModalPagoVisible(false);router.push('/tabs/pago');}}>
-              <Text style={styles.modalButtonText}>Entendido, continuar a pagar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
     </SafeAreaView>
   );

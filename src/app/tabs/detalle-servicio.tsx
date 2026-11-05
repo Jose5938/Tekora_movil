@@ -2,119 +2,53 @@ import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { ApiState } from '@/components/api-state';
+import { PreparationNotice } from '@/components/preparation-notice';
+import { modalityLabels, resourceId, type Resource, type Service } from '@/api/types';
 
 export default function DetalleServicioScreen() {
   const router = useRouter();
-
-  // Datos simulados del servicio publicado
-  const servicio = {
-    folio: 'RP-1248',
-    titulo: 'Mi lavadora Whirlpool no exprime', 
-    etiqueta: 'Refrigerador', 
-    descripcion: 'El congelador funciona perfecto, pero la parte de abajo de mi refri Mabe dejó de enfriar desde ayer en la noche.',
-    estado: 'Buscando expertos',
-    ubicacion: 'Roma Norte, CDMX',
-    fecha: 'Publicado hoy, 09:30 a.m.'
-  };
-
-  // Técnicos sugeridos (filtrados por la etiqueta del problema)
-  const expertosSugeridos = [
-    { id: 1, nombre: 'Carlos Mendoza', especialidad: 'Refrigeradores', exp: '8 años', rating: '4.9', precio: '$350' },
-    { id: 2, nombre: 'Roberto Gómez', especialidad: 'Refrigeración Industrial', exp: '12 años', rating: '4.8', precio: '$400' },
-  ];
-
+  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const serviceId = resourceId(id);
+  const resource = useApiResource<Resource<Service>>(serviceId ? `/services/${serviceId}` : null);
+  const service = resource.data?.data;
   return (
     <SafeAreaView style={styles.safeArea}>
-      
-      {/* Cabecera */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalle de Solicitud</Text>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        <TouchableOpacity accessibilityLabel="Volver" onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={24} color="#1a1a1a" /></TouchableOpacity>
+        <Text style={styles.headerTitle}>Detalle del servicio</Text>
+        <TouchableOpacity accessibilityLabel="Actualizar servicio" style={styles.iconButton} onPress={resource.retry}><Ionicons name="refresh-outline" size={24} color="#1a1a1a" /></TouchableOpacity>
       </View>
-
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Tarjeta de Especificaciones del Problema */}
-        <View style={styles.specsCard}>
-          <View style={styles.specsHeader}>
-            <Text style={styles.folioText}>Folio: {servicio.folio}</Text>
-            <View style={styles.statusBadge}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>{servicio.estado}</Text>
+        <ApiState {...resource} />
+        {service && <>
+          <View style={styles.specsCard}>
+            <View style={styles.specsHeader}>
+              <Text style={styles.folioText}>Servicio #{service.id}</Text>
+              <View style={styles.statusBadge}><Text style={styles.statusText}>Catálogo público</Text></View>
             </View>
+            <View style={styles.tagContainer}><Ionicons name="build-outline" size={16} color="#005b9f" /><Text style={styles.tagText}>{service.category.name}</Text></View>
+            <Text style={styles.problemTitle}>{service.title}</Text>
+            <Text style={styles.problemDescription}>{service.description}</Text>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}><Ionicons name="laptop-outline" size={18} color="#666" /><Text style={styles.infoText}>{modalityLabels[service.modality]}</Text></View>
           </View>
-
-          <View style={styles.tagContainer}>
-            <Ionicons name="snow-outline" size={16} color="#005b9f" />
-            <Text style={styles.tagText}>{servicio.etiqueta}</Text>
-          </View>
-
-          <Text style={styles.problemTitle}>{servicio.titulo}</Text>
-          <Text style={styles.problemDescription}>"{servicio.descripcion}"</Text>
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.infoRow}>
-            <Ionicons name="location-outline" size={18} color="#666" />
-            <Text style={styles.infoText}>{servicio.ubicacion}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={18} color="#666" />
-            <Text style={styles.infoText}>{servicio.fecha}</Text>
-          </View>
-        </View>
-
-        {/* Sección de Técnicos Sugeridos */}
-        <View style={styles.suggestedHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>Técnicos Sugeridos</Text>
-            <Text style={styles.sectionSubtitle}>Basado en tu etiqueta de "{servicio.etiqueta}"</Text>
-          </View>
-          <Ionicons name="sparkles" size={24} color="#FFBA08" />
-        </View>
-
-        {expertosSugeridos.map((experto) => (
-          <View key={experto.id} style={styles.expertCard}>
-            <View style={styles.expertAvatarPlaceholder}>
-              <Ionicons name="person" size={28} color="#ccc" />
-            </View>
+          <View style={styles.suggestedHeader}><Text style={styles.sectionTitle}>Prestador del servicio</Text></View>
+          <View style={styles.expertCard}>
+            <View style={styles.expertAvatarPlaceholder}><Ionicons name="person" size={28} color="#ccc" /></View>
             <View style={styles.expertInfo}>
-              <View style={styles.expertNameRow}>
-                <Text style={styles.expertName}>{experto.nombre}</Text>
-                <Ionicons name="checkmark-circle" size={14} color="#005b9f" style={{marginLeft: 4}} />
-              </View>
-              <Text style={styles.expertSubtitle}>{experto.especialidad} · {experto.exp}</Text>
-              <Text style={styles.expertDetails}>
-                <Ionicons name="star" size={12} color="#005b9f" /> {experto.rating}
-              </Text>
+              <View style={styles.expertNameRow}><Text style={styles.expertName}>{service.provider.display_name}</Text></View>
+              <Text style={styles.expertSubtitle}>{service.provider.headline ?? 'Presentación no publicada'}</Text>
+              <Text style={styles.expertDetails}>{service.provider.bio ?? 'Biografía no publicada'}</Text>
             </View>
             <View style={styles.expertActionContainer}>
-              <Text style={styles.expertPrice}>{experto.precio}</Text>
-              
-              {/* Botón modificado con redirección y mensaje automático */}
-              <TouchableOpacity 
-                style={styles.contactButton}
-                onPress={() => {
-                  const primerNombre = experto.nombre.split(' ')[0];
-                  router.push({
-                    pathname: '/tabs/chat',
-                    params: { autoMsg: `Hola ${primerNombre}. Me gustaría solicitar tus servicios para mi ${servicio.etiqueta}: "${servicio.titulo}" (Folio: ${servicio.folio}). ¿Podrías darme una cotización?` }
-                  });
-                }}
-              >
-                <Text style={styles.contactButtonText}>Contactar</Text>
-              </TouchableOpacity>
-
+              <TouchableOpacity style={styles.contactButton} onPress={() => router.push({ pathname: '/tabs/perfil-experto', params: { id: service.provider.id } })}><Text style={styles.contactButtonText}>Ver perfil</Text></TouchableOpacity>
             </View>
           </View>
-        ))}
-
+          <PreparationNotice>Las reservas, cotizaciones y pagos aún no están disponibles. Consultar este servicio no crea una solicitud.</PreparationNotice>
+        </>}
       </ScrollView>
     </SafeAreaView>
   );

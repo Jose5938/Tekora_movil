@@ -1,0 +1,476 @@
+[
+  {
+    "name": "expo",
+    "version": "58.0.23",
+    "engines": {
+      "node": "^22.13.0 || ^24.3.0 || ^26.0.0 || >=27.0.0"
+    },
+    "dist-tags": {
+      "sdk-52": "52.0.49",
+      "sdk-53": "53.0.27",
+      "canary-sdk-55": "55.0.3-canary-20260429-a5e59cf",
+      "canary-sdk-56": "56.0.6-canary-20260701-9100865",
+      "canary": "58.0.0-canary-20260909-ea7a89a",
+      "next": "58.0.11",
+      "sdk-57": "57.0.32",
+      "sdk-56": "56.0.24",
+      "sdk-55": "55.0.32",
+      "sdk-54": "54.0.38",
+      "latest": "58.0.23"
+    },
+    "installed_after": "58.0.22",
+    "dependencies": {
+      "@expo/cli": "^58.1.19",
+      "expo-font": "~58.0.11",
+      "expo-asset": "~58.0.20",
+      "@expo/metro": "~58.0.0",
+      "@expo/config": "~58.0.11",
+      "@expo/log-box": "^58.0.15",
+      "pretty-format": "^29.7.0",
+      "react-refresh": "^0.14.2",
+      "@babel/runtime": "^7.20.0",
+      "@expo/devtools": "~58.0.2",
+      "expo-constants": "~58.0.15",
+      "expo-keep-awake": "~58.0.3",
+      "expo-file-system": "~58.0.13",
+      "expo-modules-cli": "~0.4.0",
+      "@expo/dom-webview": "~58.0.2",
+      "@expo/fingerprint": "^0.21.9",
+      "babel-preset-expo": "~58.0.24",
+      "expo-modules-core": "~58.0.30",
+      "@expo/metro-config": "~58.0.21",
+      "whatwg-url-minimum": "^0.2.0",
+      "@expo/log-box-utils": "^58.0.2",
+      "@expo/config-plugins": "~58.0.12",
+      "@ungap/structured-clone": "^1.3.0",
+      "expo-modules-autolinking": "~58.0.17",
+      "@expo/local-build-cache-provider": "^58.0.11"
+    },
+    "peerDependencies": {
+      "react": "*",
+      "react-dom": "*",
+      "react-native": "*",
+      "react-native-web": "*",
+      "@expo/dom-webview": "*",
+      "@expo/metro-runtime": "*",
+      "react-native-webview": "*"
+    }
+  },
+  {
+    "name": "@expo/cli",
+    "version": "58.1.19",
+    "dist-tags": {
+      "sdk-50": "0.17.7",
+      "sdk-53": "0.24.24",
+      "sdk-52": "0.22.28",
+      "canary-sdk-55": "55.0.13-canary-20260429-a5e59cf",
+      "canary-sdk-56": "56.1.13-canary-20260701-9100865",
+      "canary": "58.0.0-canary-20260909-ea7a89a",
+      "next": "58.1.9",
+      "sdk-57": "57.0.33",
+      "sdk-56": "56.1.27",
+      "sdk-55": "55.0.37",
+      "sdk-54": "54.0.28",
+      "latest": "58.1.19"
+    },
+    "installed_after": "58.1.19",
+    "dependencies": {
+      "2g": "^1.0.1",
+      "ws": "^8.12.1",
+      "arg": "^5.0.2",
+      "ora": "^3.4.0",
+      "glob": "^13.0.0",
+      "send": "^0.19.0",
+      "toqr": "^0.1.1",
+      "chalk": "^4.0.0",
+      "getenv": "^2.0.0",
+      "semver": "^7.7.4",
+      "accepts": "^1.3.8",
+      "ci-info": "^3.3.0",
+      "connect": "^3.7.0",
+      "prompts": "^2.3.2",
+      "slugify": "^1.3.4",
+      "progress": "^2.0.3",
+      "@expo/env": "~2.5.4",
+      "multitars": "^1.0.2",
+      "picomatch": "^4.0.4",
+      "wrap-ansi": "^7.0.0",
+      "node-forge": "^1.4.0",
+      "@expo/metro": "~58.0.0",
+      "@expo/plist": "^0.10.1",
+      "compression": "^1.7.4",
+      "expo-server": "^58.0.6",
+      "lan-network": "^0.2.1",
+      "@expo/config": "~58.0.11",
+      "resolve-from": "^5.0.0",
+      "@expo/devcert": "^1.2.2",
+      "@expo/log-box": "^58.0.15",
+      "bplist-parser": "^0.3.1",
+      "pretty-format": "^29.7.0",
+      "terminal-link": "^2.1.1",
+      "@expo/xcpretty": "^4.4.6",
+      "bplist-creator": "0.1.0",
+      "fetch-nodeshim": "^0.4.10",
+      "@expo/json-file": "^11.2.1",
+      "@expo/osascript": "^2.8.1",
+      "@expo/platforms": "^58.0.1",
+      "@expo/ws-tunnel": "^2.0.1",
+      "dnssd-advertise": "^1.1.6",
+      "npm-package-arg": "^11.0.0",
+      "@expo/image-utils": "^0.12.6",
+      "@expo/spawn-async": "^1.8.0",
+      "stacktrace-parser": "^0.1.10",
+      "@expo/metro-config": "58.0.21",
+      "@expo/schema-utils": "^58.0.3",
+      "agent-cli-detector": "0.1.7",
+      "structured-headers": "^0.4.1",
+      "@expo/log-box-utils": "^58.0.2",
+      "@expo/require-utils": "^58.0.5",
+      "@expo/router-server": "^58.0.21",
+      "@expo/config-plugins": "~58.0.12",
+      "@expo/inline-modules": "^0.2.9",
+      "@expo/metro-file-map": "^58.0.5",
+      "sandbox-cli-detector": "^0.2.0",
+      "@expo/package-manager": "^1.14.2",
+      "@expo/prebuild-config": "^58.0.19",
+      "@react-native/asset-utils": "0.88.1",
+      "@react-native/js-polyfills": "0.88.1",
+      "@react-native/dev-middleware": "0.88.1",
+      "@expo/code-signing-certificates": "^0.0.7"
+    },
+    "peerDependencies": {
+      "expo": "*",
+      "expo-mcp": "*",
+      "expo-router": "*",
+      "react-native": "*"
+    }
+  },
+  {
+    "name": "@expo/config",
+    "version": "58.0.11",
+    "dist-tags": {
+      "alpha": "3.3.31-alpha.0",
+      "sdk-50": "8.5.4",
+      "sdk-51": "9.0.2",
+      "sdk-52": "10.0.11",
+      "canary-sdk-55": "55.0.9-canary-20260429-a5e59cf",
+      "canary-sdk-56": "56.0.10-canary-20260701-9100865",
+      "sdk-54": "12.0.14",
+      "sdk-55": "55.0.21",
+      "canary": "58.0.0-canary-20260909-ea7a89a",
+      "sdk-57": "57.0.11",
+      "next": "58.0.6",
+      "sdk-56": "56.0.15",
+      "latest": "58.0.11"
+    },
+    "installed_after": "58.0.11",
+    "dependencies": {
+      "getenv": "^2.0.0",
+      "semver": "^7.7.4",
+      "slugify": "^1.3.4",
+      "@expo/json-file": "^11.2.1",
+      "@expo/platforms": "^58.0.1",
+      "@expo/config-types": "^58.0.3",
+      "@expo/require-utils": "^58.0.5",
+      "@expo/config-plugins": "~58.0.12",
+      "resolve-workspace-root": "^2.0.0"
+    },
+    "peerDependencies": {}
+  },
+  {
+    "name": "@expo/config-plugins",
+    "version": "58.0.12",
+    "dist-tags": {
+      "sdk-50": "7.8.4",
+      "sdk-51": "8.0.4",
+      "sdk-52": "9.0.17",
+      "canary-sdk-55": "55.0.7-canary-20260429-a5e59cf",
+      "canary-sdk-56": "56.0.9-canary-20260701-9100865",
+      "canary": "58.0.0-canary-20260909-ea7a89a",
+      "next": "58.0.9",
+      "sdk-57": "57.0.12",
+      "sdk-56": "56.0.17",
+      "sdk-55": "55.0.12",
+      "sdk-54": "54.0.6",
+      "latest": "58.0.12"
+    },
+    "installed_after": "58.0.12",
+    "dependencies": {
+      "chalk": "^4.1.2",
+      "debug": "^4.3.5",
+      "xcode": "^4.0.0",
+      "getenv": "^2.0.0",
+      "semver": "^7.7.4",
+      "xml2js": "0.6.0",
+      "slugify": "^1.6.6",
+      "tinyglobby": "^0.2.15",
+      "@expo/plist": "^0.10.1",
+      "@expo/json-file": "~11.2.1",
+      "@expo/config-types": "^58.0.3",
+      "@expo/require-utils": "^58.0.5",
+      "@expo/sdk-runtime-versions": "^1.0.1"
+    },
+    "peerDependencies": {}
+  },
+  {
+    "name": "@expo/fingerprint",
+    "version": "0.21.9",
+    "dist-tags": {
+      "sdk-50": "0.6.0",
+      "sdk-51": "0.8.0",
+      "sdk-54": "0.15.5",
+      "canary-sdk-55": "0.17.0-canary-20260429-a5e59cf",
+      "canary-sdk-56": "1.0.0-canary-20260701-9100865",
+      "sdk-55": "0.16.8",
+      "sdk-56": "0.19.10",
+      "canary": "1.0.0-canary-20260909-ea7a89a",
+      "sdk-57": "0.20.15",
+      "next": "0.21.5",
+      "latest": "0.21.9"
+    },
+    "installed_after": "0.21.8",
+    "dependencies": {
+      "arg": "^5.0.2",
+      "glob": "^13.0.0",
+      "chalk": "^4.1.2",
+      "debug": "^4.3.4",
+      "getenv": "^2.0.0",
+      "ignore": "^5.3.1",
+      "semver": "^7.7.4",
+      "@expo/env": "^2.5.4",
+      "minimatch": "^10.2.2",
+      "resolve-from": "^5.0.0",
+      "@expo/spawn-async": "^1.8.0"
+    },
+    "peerDependencies": {}
+  },
+  {
+    "name": "@expo/metro-config",
+    "version": "58.0.21",
+    "dist-tags": {
+      "alpha": "0.1.57-alpha.0",
+      "sdk-50": "0.17.6",
+      "sdk-51": "0.18.4",
+      "sdk-53": "0.20.18",
+      "canary-sdk-55": "55.0.10-canary-20260429-a5e59cf",
+      "canary-sdk-56": "56.0.14-canary-20260701-9100865",
+      "sdk-54": "54.0.17",
+      "sdk-55": "55.0.27",
+      "canary": "58.0.0-canary-20260909-ea7a89a",
+      "sdk-57": "57.0.14",
+      "next": "58.0.14",
+      "sdk-56": "56.0.20",
+      "latest": "58.0.21"
+    },
+    "installed_after": "58.0.21",
+    "dependencies": {
+      "2g": "^1.0.1",
+      "chalk": "^4.1.0",
+      "debug": "^4.3.2",
+      "getenv": "^2.0.0",
+      "postcss": "^8.5.23",
+      "@expo/env": "~2.5.4",
+      "picomatch": "^4.0.4",
+      "noxcturnal": "^0.1.11",
+      "tinyglobby": "^0.2.15",
+      "@babel/core": "^7.20.0",
+      "@expo/metro": "~58.0.0",
+      "@expo/config": "~58.0.11",
+      "browserslist": "^4.25.0",
+      "jsc-safe-url": "^0.2.4",
+      "lightningcss": "^1.30.1",
+      "resolve-from": "^5.0.0",
+      "hermes-parser": "^0.36.0",
+      "@expo/json-file": "~11.2.1",
+      "@expo/platforms": "^58.0.1",
+      "@babel/generator": "^7.20.5",
+      "@babel/code-frame": "^7.20.0",
+      "@expo/spawn-async": "^1.8.0",
+      "@expo/require-utils": "^58.0.5",
+      "@jridgewell/remapping": "^2.3.5",
+      "@jridgewell/gen-mapping": "^0.3.13",
+      "@jridgewell/trace-mapping": "^0.3.31",
+      "@react-native/js-polyfills": "0.88.1",
+      "@jridgewell/sourcemap-codec": "^1.5.5"
+    },
+    "peerDependencies": {
+      "expo": "*"
+    }
+  },
+  {
+    "name": "expo-router",
+    "version": "58.0.30",
+    "dist-tags": {
+      "sdk-50": "3.4.8",
+      "sdk-52-router-patches": "5.0.0-sdk-52-router-patches",
+      "sdk-52": "4.0.22",
+      "sdk-53": "5.1.11",
+      "canary-sdk-55": "55.0.3-canary-20260429-a5e59cf",
+      "sdk-54": "6.0.24",
+      "canary-sdk-56": "56.2.8-canary-20260701-9100865",
+      "sdk-55": "55.0.18",
+      "canary": "58.0.0-canary-20260909-ea7a89a",
+      "next": "58.0.20",
+      "sdk-57": "57.0.30",
+      "sdk-56": "56.2.22",
+      "latest": "58.0.30"
+    },
+    "installed_after": "58.0.29",
+    "dependencies": {
+      "nanoid": "^3.3.18",
+      "react-is": "^19.1.0",
+      "client-only": "^0.0.1",
+      "expo-server": "^58.0.6",
+      "server-only": "^0.0.1",
+      "@expo/log-box": "^58.0.15",
+      "expo-status-bar": "^58.0.4",
+      "expo-glass-effect": "^58.0.5",
+      "@expo/schema-utils": "^58.0.3",
+      "react-fast-compare": "^3.2.2",
+      "@expo/metro-runtime": "^58.0.17",
+      "standard-navigation": "^0.0.5",
+      "@radix-ui/react-slot": "^1.2.0",
+      "@radix-ui/react-tabs": "^1.1.12",
+      "react-native-screens": "^4.30.1 || ^5.0.0-alpha.3",
+      "sf-symbols-typescript": "^2.1.0",
+      "react-native-drawer-layout": "^4.2.12",
+      "@react-native/normalize-colors": "0.88.1",
+      "@react-native-masked-view/masked-view": "^0.3.2"
+    },
+    "peerDependencies": {
+      "expo": "*",
+      "react": "*",
+      "@expo/ui": "^58.0.27",
+      "react-dom": "*",
+      "expo-linking": "^58.0.16",
+      "expo-symbols": "^58.0.4",
+      "react-native": "*",
+      "@expo/log-box": "^58.0.15",
+      "expo-constants": "^58.0.15",
+      "react-native-web": "*",
+      "@expo/metro-runtime": "^58.0.17",
+      "react-native-screens": "^4.30.1 || ^5.0.0-alpha.3",
+      "react-native-worklets": "*",
+      "react-native-reanimated": "*",
+      "react-server-dom-webpack": "~19.0.4 || ~19.1.5 || ~19.2.4 || ~19.3.0",
+      "react-native-gesture-handler": "*",
+      "@testing-library/react-native": ">= 14.0.0",
+      "react-native-safe-area-context": ">= 5.4.0"
+    }
+  },
+  {
+    "name": "eslint-config-expo",
+    "version": "58.0.4",
+    "dist-tags": {
+      "sdk-51": "7.1.2",
+      "canary-sdk-55": "55.0.1-canary-20260429-a5e59cf",
+      "canary-sdk-56": "56.0.5-canary-20260701-9100865",
+      "latest": "58.0.4",
+      "canary": "58.0.0-canary-20260909-ea7a89a",
+      "next": "58.0.4"
+    },
+    "installed_after": "58.0.4",
+    "dependencies": {
+      "globals": "^16.0.0",
+      "eslint-plugin-expo": "^1.2.1",
+      "eslint-plugin-react": "^7.37.3",
+      "eslint-plugin-import": "^2.30.0",
+      "@typescript-eslint/parser": "^8.59.0",
+      "eslint-plugin-react-hooks": "^7.0.0",
+      "@typescript-eslint/eslint-plugin": "^8.59.0",
+      "eslint-import-resolver-typescript": "^3.6.3"
+    },
+    "peerDependencies": {
+      "eslint": ">=8.10"
+    }
+  },
+  {
+    "name": "@typescript-eslint/typescript-estree",
+    "version": "8.72.1",
+    "engines": {
+      "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
+    },
+    "dist-tags": {
+      "rc-v3": "3.0.0-alpha.27",
+      "rc-v4": "4.0.0-alpha.16",
+      "rc-v5": "5.0.0-alpha.42",
+      "rc-v": "6.0.0-alpha.58",
+      "rc-v6": "7.0.0-alpha.0",
+      "rc-v8": "8.0.0-alpha.62",
+      "latest": "8.72.1",
+      "canary": "8.72.2-alpha.11"
+    },
+    "installed_after": "8.72.1",
+    "dependencies": {
+      "debug": "^4.4.3",
+      "semver": "^7.7.3",
+      "minimatch": "^10.2.2",
+      "tinyglobby": "^0.2.15",
+      "ts-api-utils": "^2.5.0",
+      "@typescript-eslint/types": "8.72.1",
+      "@typescript-eslint/visitor-keys": "8.72.1",
+      "@typescript-eslint/tsconfig-utils": "8.72.1",
+      "@typescript-eslint/project-service": "8.72.1"
+    },
+    "peerDependencies": {
+      "typescript": ">=4.8.4 <6.1.0"
+    }
+  },
+  {
+    "name": "glob",
+    "version": "14.0.3",
+    "engines": {
+      "node": "18 || 20 || >=22"
+    },
+    "dist-tags": {
+      "legacy": "4.5.3",
+      "v7-legacy": "7.2.0",
+      "legacy-v9": "9.3.5",
+      "legacy-v10": "10.5.0",
+      "latest": "14.0.3"
+    },
+    "installed_after": "13.0.6",
+    "dependencies": {
+      "minipass": "^7.1.3",
+      "minimatch": "^11.0.2",
+      "path-scurry": "^3.0.0"
+    },
+    "peerDependencies": {}
+  },
+  {
+    "name": "minimatch",
+    "version": "11.0.4",
+    "engines": {
+      "node": "20 || >=22"
+    },
+    "dist-tags": {
+      "legacy-v8": "8.0.7",
+      "legacy-v7": "7.4.9",
+      "legacy-v6": "6.2.3",
+      "legacy-v5": "5.1.9",
+      "legacy-v4": "4.2.6",
+      "legacy-v3": "3.1.5",
+      "legacy-v9": "9.0.9",
+      "latest": "11.0.4"
+    },
+    "installed_after": "3.1.5",
+    "dependencies": {
+      "brace-expansion": "^5.0.12",
+      "@isaacs/nonrecursive-glob-match": "^1.0.3"
+    },
+    "peerDependencies": {}
+  },
+  {
+    "name": "shell-quote",
+    "version": "1.12.0",
+    "engines": {
+      "node": ">= 0.4"
+    },
+    "dist-tags": {
+      "latest": "1.12.0"
+    },
+    "installed_after": "1.12.0",
+    "dependencies": {},
+    "peerDependencies": {}
+  }
+]

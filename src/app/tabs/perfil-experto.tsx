@@ -2,160 +2,71 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import NavegacionPersonalizada from './navegador';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import NavegacionPersonalizada from '@/components/navegacion-personalizada';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { ApiState } from '@/components/api-state';
+import { PreparationNotice } from '@/components/preparation-notice';
+import { resourceId, type Provider, type Resource } from '@/api/types';
 
 export default function PerfilExpertoScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const providerId = resourceId(id);
+  const resource = useApiResource<Resource<Provider>>(providerId ? `/providers/${providerId}` : null);
+  const provider = resource.data?.data;
   const [modalVisible, setModalVisible] = useState(false);
-
-  // Problemas activos del cliente (Simulación)
-  const misProblemas = [
-    { id: '1', titulo: 'La parte de abajo no enfría', equipo: 'Refrigerador Mabe', folio: 'RP-1248' },
-    { id: '2', titulo: 'Hace ruido al exprimir', equipo: 'Lavadora Whirlpool', folio: 'LV-0932' }
-  ];
-
-  // Función que cierra el modal y manda al chat con el mensaje automático
-  const confirmarSolicitud = (problema: any) => {
-    setModalVisible(false);
-    router.push({
-      pathname: '/tabs/chat',
-      params: { autoMsg: `Hola Carlos. Me gustaría solicitar tus servicios para mi ${problema.equipo}: "${problema.titulo}" (Folio: ${problema.folio}). ¿Podrías darme una cotización?` }
-    });
-  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      
-      {/* Cabecera Superior */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+        <TouchableOpacity accessibilityLabel="Volver" onPress={() => router.back()} style={styles.iconButton}>
           <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Perfil del experto</Text>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Favoritos en preparación" style={[styles.iconButton, { opacity: 0.5 }]}>
           <Ionicons name="heart-outline" size={24} color="#1a1a1a" />
         </TouchableOpacity>
       </View>
-
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Información Principal del Perfil */}
-        <View style={styles.profileTop}>
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={40} color="#ccc" />
+        <ApiState {...resource} />
+        {provider && <>
+          <View style={styles.profileTop}>
+            <View style={styles.avatarPlaceholder}><Ionicons name="person" size={40} color="#ccc" /></View>
+            <View style={styles.nameContainer}><Text style={styles.name}>{provider.display_name}</Text></View>
+            <Text style={styles.specialty}>{provider.headline ?? 'Presentación no publicada'}</Text>
+            <View style={styles.statsRow}><Text style={styles.statText}>Perfil público del prestador</Text></View>
           </View>
-          
-          <View style={styles.nameContainer}>
-            <Text style={styles.name}>Carlos Mendoza</Text>
-            <Ionicons name="checkmark-circle" size={18} color="#005b9f" style={{ marginLeft: 4 }} />
-          </View>
-          <Text style={styles.specialty}>Especialista en Refrigeradores</Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Ionicons name="star" size={16} color="#FFBA08" />
-              <Text style={styles.statText}><Text style={styles.statBold}>4.9</Text> (128)</Text>
-            </View>
-            <Text style={styles.statDivider}>•</Text>
-            <View style={styles.statItem}>
-              <Ionicons name="briefcase-outline" size={16} color="#666" />
-              <Text style={styles.statText}>8 años exp.</Text>
-            </View>
-            <Text style={styles.statDivider}>•</Text>
-            <View style={styles.statItem}>
-              <Ionicons name="checkmark-done" size={16} color="#666" />
-              <Text style={styles.statText}>450+ trab.</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Botones de Acción (Solicitar / Mensaje) */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => setModalVisible(true)}>
-            <Text style={styles.primaryButtonText}>Solicitar servicio</Text>
-            <Text style={styles.primaryButtonSub}>$350 MXN · diag.</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/tabs/chat')}>
-            <Ionicons name="chatbubble-ellipses-outline" size={24} color="#005b9f" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Sección: Sobre mí */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sobre mí</Text>
-          <Text style={styles.aboutText}>
-            Hola, soy Carlos. Tengo más de 8 años de experiencia reparando refrigeradores domésticos y comerciales. Trabajo rápido, limpio y ofrezco garantía de 30 días en todas mis reparaciones con piezas originales.
-          </Text>
-        </View>
-
-        {/* Sección: Especialidades */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Especialidades</Text>
-          <View style={styles.badgesContainer}>
-            <View style={styles.badge}><Text style={styles.badgeText}>Refrigeradores</Text></View>
-            <View style={styles.badge}><Text style={styles.badgeText}>Congeladores</Text></View>
-            <View style={styles.badge}><Text style={styles.badgeText}>Mantenimiento</Text></View>
-          </View>
-        </View>
-
-        {/* Sección: Reseñas */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Reseñas (128)</Text>
-            <TouchableOpacity><Text style={styles.seeAllText}>Ver todas</Text></TouchableOpacity>
-          </View>
-          
-          <View style={styles.reviewCard}>
-            <View style={styles.reviewHeader}>
-              <View style={styles.reviewerAvatar}><Text style={styles.reviewerInitial}>M</Text></View>
-              <View style={styles.reviewerInfo}>
-                <Text style={styles.reviewerName}>Mariana L.</Text>
-                <View style={styles.starsRow}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Ionicons key={star} name="star" size={12} color="#FFBA08" />
-                  ))}
-                </View>
-              </View>
-              <Text style={styles.reviewDate}>Hace 2 días</Text>
-            </View>
-            <Text style={styles.reviewText}>
-              Excelente servicio. Llegó puntual, revisó mi refri y tenía la pieza de repuesto lista. Muy amable y profesional.
-            </Text>
-          </View>
-        </View>
-
-      </ScrollView>
-
-      {/* Ventana Emergente (Modal) para seleccionar el problema */}
-      <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>¿Para qué problema lo necesitas?</Text>
-            <Text style={styles.modalSubtitle}>Selecciona una de tus solicitudes activas</Text>
-
-            {misProblemas.map((prob) => (
-              <TouchableOpacity key={prob.id} style={styles.problemOption} onPress={() => confirmarSolicitud(prob)}>
-                <View style={styles.problemOptionIcon}>
-                  <Ionicons name="build-outline" size={20} color="#005b9f" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.problemOptionTitle}>{prob.titulo}</Text>
-                  <Text style={styles.problemOptionSub}>{prob.equipo} · {prob.folio}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
-              </TouchableOpacity>
-            ))}
-
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+          <View style={styles.actionsRow}>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => setModalVisible(true)}>
+              <Text style={styles.primaryButtonText}>Solicitar servicio</Text>
+              <Text style={styles.primaryButtonSub}>En preparación</Text>
+            </TouchableOpacity>
+            <TouchableOpacity accessibilityLabel="Ver chat en preparación" style={styles.secondaryButton} onPress={() => router.push('/tabs/chat')}>
+              <Ionicons name="chatbubble-ellipses-outline" size={24} color="#005b9f" />
             </TouchableOpacity>
           </View>
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sobre mí</Text>
+            <Text style={styles.aboutText}>{provider.bio ?? 'Biografía no publicada'}</Text>
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Presentación</Text>
+            <View style={styles.badgesContainer}><View style={styles.badge}><Text style={styles.badgeText}>{provider.headline ?? 'Sin presentación'}</Text></View></View>
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reseñas</Text>
+            <View style={styles.reviewCard}><Text style={styles.reviewText}>Las reseñas y calificaciones aún no están disponibles.</Text></View>
+          </View>
+        </>}
+      </ScrollView>
+      <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}><View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Solicitudes en preparación</Text>
+          <PreparationNotice>Todavía no es posible solicitar, reservar ni enviar mensajes al prestador desde la app.</PreparationNotice>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}><Text style={styles.cancelButtonText}>Entendido</Text></TouchableOpacity>
+        </View></View>
       </Modal>
-
-      {/* Menú inferior */}
       <NavegacionPersonalizada />
     </SafeAreaView>
   );

@@ -14,6 +14,7 @@
     "expo-linking": "~58.0.15",
     "expo-navigation-bar": "~58.0.4",
     "expo-router": "~58.0.29",
+    "expo-secure-store": "~58.0.2",
     "expo-splash-screen": "~58.0.12",
     "expo-status-bar": "~58.0.4",
     "expo-symbols": "~58.0.4",
@@ -31,6 +32,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -39,7 +42,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node scripts/test-api.cjs"
   },
   "private": true
 }
