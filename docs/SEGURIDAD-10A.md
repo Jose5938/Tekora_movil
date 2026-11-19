@@ -1,5 +1,48 @@
 # PR #1 — compatibilidad Node 22/24 y dependencias
 
+## Actualización del 19 de noviembre de 2026
+
+La revisión parte de `cf2b1344f5ef83d78209ea7f326ed7f991e4711f`. Se mantiene el ejecutor de pruebas publicado en ese commit y la resolución `shell-quote@1.12.0` bajo `react-native@0.88.1 → react-devtools-core@6.1.5`. Los resultados y las rutas del 5 de noviembre se conservan más abajo como registro histórico.
+
+Con npm 11.9.0 se ejecutó:
+
+```sh
+npm update @expo/cli @expo/fingerprint @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint-plugin-expo node-forge --package-lock-only --ignore-scripts
+```
+
+- `@expo/cli@58.1.21` y `@expo/fingerprint@0.21.10` ya no incluyen el paquete `glob`. Ambas resoluciones satisfacen los rangos que declara Expo 58.0.22. Desaparecen las rutas afectadas por GHSA-3g3m-2fjr-6pw4, corregido en glob 14.0.2. [Historial oficial de Expo](https://github.com/expo/expo/releases) · [Aviso de glob](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
+- El conjunto TypeScript ESLint pasa de 8.72.1 a 8.73.0 dentro del rango de `eslint-config-expo@58.0.4`. Su parser, plugin y utilidades convergen en `@typescript-eslint/typescript-estree@8.73.0 → minimatch@11.0.9`, que contiene la corrección publicada desde 11.0.1. `eslint-plugin-expo` conserva 1.2.1. [Release de TypeScript ESLint](https://github.com/typescript-eslint/typescript-eslint/releases/tag/v8.73.0).
+- El registro también señaló cuatro avisos de `node-forge@1.4.2` durante esta revisión. La resolución pasa a 1.4.3 dentro de `^1.4.0`, declarado por el CLI. [Avisos de Forge](https://github.com/digitalbazaar/forge/security/advisories).
+- `@expo/router-server@58.0.23`, requerido por el CLI, declara peers `expo-constants ^58.0.16` y `expo-font ^58.0.12`. Son las únicas dependencias directas que cambian de resolución instalada y satisfacen los rangos existentes. Expo sigue en 58.0.22, Router en 58.0.29, React Native en 0.88.1 y SecureStore en 58.0.2. El manifiesto, el código de aplicación y los contratos Laravel quedan intactos.
+
+### Aviso residual
+
+La única ruta afectada es `expo@58.0.22 → @expo/fingerprint@0.21.10 → minimatch@10.2.6` (`node_modules/minimatch`). Las auditorías marcan los tres paquetes por el mismo aviso. Fingerprint usa minimatch para cotejar rutas e ignorados en herramientas Node de build. Un patrón manipulado puede agotar CPU o memoria en los modos de optimización afectados. Esta validación no incluyó un binario móvil.
+
+Fingerprint 0.21.10, la estable consultada el 19 de noviembre, todavía requiere `minimatch ^10.2.6`, que excluye la corrección 11.0.1. Expo 58.0.26 sigue dependiendo de `@expo/fingerprint ^0.21.10`. Se conserva SDK 58 y se ejecutan las auditorías completas. La propuesta de npm de instalar Expo 52.0.49 no se aplicó. [Aviso de minimatch](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+
+### Validación del lockfile actualizado
+
+Linux, npm 11.9.0, con Node 24.22.1 para los comandos generales. Se utilizó la caché de npm del entorno y se habilitaron sus auditorías para todas las ejecuciones.
+
+| Comando | Salida | Resultado |
+| --- | --- | --- |
+| `npm ci` | 0 | 807 paquetes instalados; aviso de deprecación de ESLint 9.39.5 |
+| `npm test` en Node 22.13.0 | 0 | 29 de 29 pasan; 0 fallos, cancelaciones u omisiones |
+| `npm test` en Node 24.22.1 | 0 | 29 de 29 pasan; 0 fallos, cancelaciones u omisiones |
+| `npx tsc --noEmit` | 0 | Expo generó `expo-env.d.ts` y `.expo/types/router.d.ts` |
+| `npx expo lint` | 0 | Sin diagnósticos |
+| `npx expo-doctor` (1.21.8) | 1 | 18/20; `exp.host` devolvió `EAI_AGAIN` y React Native Directory dio una respuesta inesperada |
+| `npm audit` | 1 | 3 moderadas, 0 críticas, altas o bajas |
+| `npm audit --omit=dev` | 1 | 3 moderadas, 0 críticas, altas o bajas |
+| `npm ls --all` y `git diff --check` | 0 | Árbol válido y diff limpio |
+
+El código instalado de Fingerprint usa `{ dot: true }` como configuración de matching predeterminada en `build/utils/Path.js`. Esto delimita el uso observado. El aviso sigue abierto para la versión instalada.
+
+Las auditorías en JSON están en [auditoría completa](evidence/10a-security/audit-2026-11-19.json) y [auditoría sin desarrollo](evidence/10a-security/audit-production-2026-11-19.json). Queda pendiente completar Expo Doctor con acceso a sus servicios remotos y repetir la comprobación en Windows y en un cliente nativo compatible. La evidencia de esta revisión corresponde a Linux.
+
+## Revisión anterior del 5 de noviembre de 2026
+
 Revisión del 5 de noviembre de 2026 sobre `fd672e51f2f7fd76b1e7c16341d96f4f40e2bbf4`, en la misma rama `codex/tekora-movil-etapa-10a` y el [PR #1](https://github.com/Jose5938/Tekora_movil/pull/1). El SHA de entrega se registra en el PR. Permanece en borrador para revisión independiente; no hubo merge ni despliegue.
 
 Se reprodujo la validación de Windows comunicada por el usuario: antes del cambio, `npm audit` informa 16 paquetes vulnerables (15 moderados y 1 crítico), y `npm audit --omit=dev`, 9 (8 moderados y 1 crítico). Después quedan **12 moderados en total, 5 al omitir desarrollo, y cero críticos o altos**. Son dos avisos directos (`glob` y `minimatch`) y sus efectos sobre los paquetes que los incluyen, no doce fallos independientes.
