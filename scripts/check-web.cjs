@@ -32,7 +32,12 @@ const results=[];
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
     page=await context.newPage();
     page.on('pageerror',error=>errors.push(error.message));
-    await page.route('http://127.0.0.1:18013/api/v1/**',async route=>{
+    let redirectRequests = 0;
+    await page.route('http://127.0.0.1:18013/downgraded', async route => {
+      redirectRequests++;
+      await route.abort();
+    });
+    await page.route('https://tekora-api.example.test/api/v1/**',async route=>{
       const request=route.request();
       const path=new URL(request.url()).pathname.replace('/api/v1','');
       requests.push({path,method:request.method(),hasBearer:!!request.headers().authorization});
@@ -43,6 +48,13 @@ const results=[];
         const input=request.postDataJSON();
         assert.deepEqual(Object.keys(input).sort(),['device_name','email','password']);
         assert.ok(input.device_name.length<=80);
+        if(input.password==='redirect') {
+          await route.fulfill({status:307,headers:{
+            'Access-Control-Allow-Origin':'http://127.0.0.1:18080',
+            Location:'http://127.0.0.1:18013/downgraded',
+          }});
+          return;
+        }
         if(input.password==='incorrecta') {status=401;body=error('invalid_credentials','No se pudo iniciar sesión con los datos proporcionados.');}
         else if(input.password==='validation') {status=422;body=error('validation_failed','Revisa los datos.',{email:['Correo rechazado por el servidor.']});}
         else if(input.password==='limited') {status=429;body=error('too_many_requests','Demasiados intentos. Espera antes de reintentar.');}
@@ -51,6 +63,12 @@ const results=[];
       else if(path==='/me') body={data:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',experience:'client',permissions:['client.appointments.view']}};
       else if(mode==='offline') {await route.abort('failed');return;}
       else if(path==='/providers') body={data:mode==='empty'?[]:[provider],meta:{...meta,total:mode==='empty'?0:1}};
+      else if(path==='/services' && mode==='malformed') body={data:{...service},meta};
+      else if(path==='/services' && mode==='unavailable') {
+        await route.fulfill({status:503,contentType:'text/html',body:'<p>Unavailable</p>',
+          headers:{'Retry-After':'45','Access-Control-Allow-Origin':'http://127.0.0.1:18080','Access-Control-Expose-Headers':'Retry-After'}});
+        return;
+      }
       else if(path==='/services') body={data:mode==='empty'?[]:[service],meta:{...meta,total:mode==='empty'?0:1}};
       else if(path==='/providers/7') body={data:provider};
       else if(path==='/services/21'&&mode!=='missing') body={data:service};
@@ -81,6 +99,10 @@ const results=[];
     await visible('Demasiados intentos. Espera antes de reintentar.');
     results.push('Validación local y errores 401, 422 y 429 del formulario.');
     await page.screenshot({path:join(evidence,'login-error.png'),fullPage:true});
+    await signIn('redirect');
+    await visible('No se pudo conectar con Tekora. Revisa tu conexión y reintenta.');
+    assert.equal(redirectRequests,0);
+    results.push('Login rechaza redirección 307 de HTTPS a HTTP sin contactar el destino.');
     await signIn('válida-sintética');
     await visible('Expertos publicados');
     await visible('Prestador de prueba');
@@ -122,6 +144,17 @@ const results=[];
     await page.getByText('Reintentar',{exact:true}).click();
     await visible('Soporte de computadoras');
     results.push('404, catálogo vacío, pérdida de conexión y reintentos visibles.');
+    mode='malformed';
+    await page.getByLabel('Actualizar catálogo',{exact:true}).click();
+    await visible('Tekora devolvió datos inesperados. Reintenta.');
+    mode='unavailable';
+    await page.getByText('Reintentar',{exact:true}).click();
+    await visible('Tekora no está disponible temporalmente. Inténtalo más tarde.');
+    mode='normal';
+    await page.getByText('Reintentar',{exact:true}).click();
+    await visible('Soporte de computadoras');
+    results.push('Catálogo rechaza JSON malformado y 503 no JSON; permite reintento de lectura.');
+
     await page.getByText('Mensajes',{exact:true}).click();
     await visible('Chat de demostración');
     assert.equal(await page.getByLabel('Envío en preparación',{exact:true}).isEnabled(),false);

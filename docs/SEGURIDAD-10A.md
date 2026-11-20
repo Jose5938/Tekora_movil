@@ -1,5 +1,50 @@
 # PR #1 — compatibilidad Node 22/24 y dependencias
 
+## Correcciones de seguridad del 20 de noviembre de 2026
+
+Base auditada `1dc1a0db95f0f91d6fb1af4b9e9f270c5438c725`, en el mismo [PR #1](https://github.com/Jose5938/Tekora_movil/pull/1).
+
+### Transporte
+
+La validación de la URL precede a la invocación de fetch para login, las solicitudes Bearer y la revocación. HTTPS es obligatorio en distribución. La excepción de desarrollo exige conjuntamente `__DEV__`, `EXPO_PUBLIC_ALLOW_LOCAL_HTTP=1` y una URL de loopback o IPv4 privada literal en la red de laboratorio. No añade excepciones nativas globales. En web se usa fetch del navegador y en nativo se importa `expo/fetch` explícitamente. Ambos reciben `redirect: 'error'`. El código de Expo 58.0.26 deshabilita seguimiento HTTP y de protocolo en OkHttp, y en iOS cancela la redirección antes de enviar la segunda solicitud. En Chromium se comprobó con un 307 a HTTP y cero solicitudes al destino. [Expo SDK 58 y expo/fetch](https://github.com/expo/expo/blob/sdk-58/docs/pages/versions/v58.0.0/sdk/expo.mdx).
+
+### Cierre de sesión
+
+**Invariante.** Solo un login explícito exitoso de la generación actual puede asignar la credencial en memoria. El constructor empieza sin credencial y el arranque solo intenta borrar el registro nativo. Ningún camino lee ese registro para autorizar `/me`. La revalidación conserva la identidad únicamente en la generación que inició la operación.
+
+El logout incrementa la generación y elimina la identidad antes de esperar I/O. Puede enviar únicamente el token capturado a la revocación. Espera el guardado anterior antes de solicitar el borrado, para que una escritura tardía no deje activa la credencial. Una respuesta de la generación anterior no puede publicar identidad. Un fallo de revocación deja un aviso y un fallo de borrado bloquea la app hasta reintentar.
+
+Si fallan la red, el borrado y todas las escrituras persistentes, el disco puede quedar idéntico al de una sesión que nunca cerró. Otro marcador no garantizaría distinguir ambos casos. La política elegida requiere login explícito después de **todo** reinicio de proceso. La regresión recrea el controlador con el mismo registro y el almacenamiento aún fallando, y comprueba que no consulta `/me` ni entrega Bearer. Esta garantía cubre la restauración por la app. El token del servidor todavía puede ser válido si la revocación no se confirmó. SecureStore sigue protegiendo el registro y la etiqueta nativa, mientras la sesión activa web solo vive en memoria.
+
+### Respuestas
+
+Login, `/me`, logout y los cuatro lectores de catálogo comprueban la envoltura y los campos que consumen. Los errores se muestran sin renderizar contenido inválido. HTTP 503 conserva `Retry-After` aunque el cuerpo no sea JSON. Los reintentos del catálogo son lecturas iniciadas por el usuario.
+
+### Resultados
+
+Linux, Node 24.22.1 y npm 11.9.0 para los comandos generales. Las 29 pruebas originales se conservan como regresiones, con las de restauración adaptadas a la política de revalidación en el mismo proceso. Se añadieron 12 casos.
+
+| Comando | Salida | Resultado |
+| --- | --- | --- |
+| `npm ci` | 0 | 806 paquetes instalados. ESLint 9.39.5 muestra el aviso de deprecación previo |
+| `npm test` en Node 22.13.0 | 0 | 41/41. Sin fallos, cancelaciones ni omisiones |
+| `npm test` en Node 24.22.1 | 0 | 41/41. Sin fallos, cancelaciones ni omisiones |
+| `npx tsc --noEmit` | 0 | Después de generar los tipos con Expo |
+| `npx expo lint` | 0 | Sin diagnósticos |
+| `npx expo install --check` | 1 | La consulta remota devolvió `HTTP Proxy Network Error: Forbidden` |
+| `EXPO_OFFLINE=1 npx expo install --check` | 0 | La matriz incluida en Expo 58.0.26 confirma `Dependencies are up to date` |
+| `npx expo-doctor --verbose` (1.21.8) | 1 | 18/20. La comprobación de versiones pasó |
+| `npm audit` y `npm audit --omit=dev` | 1 cada uno | 3 moderadas en ambos. Sin altas ni críticas |
+| Exportación web y `node scripts/check-web.cjs` | 0 ambos | 14 rutas y 11 grupos en Chromium con fixtures. Sin errores JavaScript de página |
+| `git diff --check` | 0 | Sin errores de espacios |
+
+Expo Doctor mantiene los dos resultados remotos preexistentes: `getaddrinfo EAI_AGAIN exp.host` y `Directory check failed with unexpected server response`. Ambas auditorías siguen marcando la ruta `expo@58.0.26 → @expo/fingerprint@0.21.10 → minimatch@10.2.6` por el mismo aviso moderado. El manifiesto, el lockfile y la configuración nativa siguen iguales. [Validación anterior del SDK](COMPATIBILIDAD-SDK58.md) · [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+
+Queda pendiente repetir en Windows y comprobar en Android/iOS la política de reinicio, SecureStore real y la redirección con el transporte nativo. Los controles actuales usan datos sintéticos y no acreditan una integración con Laravel real. No se cambió el backend ni se habilitaron pagos.
+
+## Revisiones anteriores
+
+
 ## Actualización del 19 de noviembre de 2026
 
 La revisión parte de `cf2b1344f5ef83d78209ea7f326ed7f991e4711f`. Se mantiene el ejecutor de pruebas publicado en ese commit y la resolución `shell-quote@1.12.0` bajo `react-native@0.88.1 → react-devtools-core@6.1.5`. Los resultados y las rutas del 5 de noviembre se conservan más abajo como registro histórico.

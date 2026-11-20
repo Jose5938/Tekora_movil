@@ -4,6 +4,8 @@ Este informe conserva los resultados originales de la integración. La revisión
 
 Ejecutada el 5 de noviembre de 2026 en Linux, Node **24.22.1**, npm **11.9.0**, Expo SDK **58**. Código móvil en `codex/tekora-movil-etapa-10a`; base `ddc4d4e0815ac18152b1ed36278fe1d317a25edc`. El SHA final y la URL se registran en la entrega del PR.
 
+La corrección posterior de transporte, sesión y respuestas está en [Seguridad de 10A](SEGURIDAD-10A.md#correcciones-de-seguridad-del-20-de-noviembre-de-2026).
+
 ## Resultados originales ejecutados
 
 | Comando/control | Resultado |
@@ -46,13 +48,13 @@ No se presenta como una verificación completa. Repetir `npx.cmd expo-doctor` en
 
 `npm test` compila el núcleo TypeScript HTTP/sesión a una carpeta temporal. El ejecutor actual carga cada archivo de pruebas directamente con Node, que ejecuta `node:test`, sin argumentos específicos de versión. Sustituye el uso original de `--test-isolation=none`, incompatible con Node 22.13.0. Se verificaron 29/29 en Node 22.13.0 y Node 24.22.1; ver [revisión del ejecutor](SEGURIDAD-10A.md#ejecutor-de-pruebas). No requiere una base de datos, credenciales reales ni un servidor remoto.
 
-Las 29 pruebas verifican: login correcto e incorrecto; cuerpo y Bearer según operación; doble pulsación; contexto global de fetch; expiración durante guardado; restauración bloqueada hasta `/me`; expiración al abrir y con sesión activa; expiración mientras llega `/me`; 401 JSON y no JSON; revocación durante sesión; logout y logout sin conexión; acceso sin token; catálogo público vacío; 404; interpretación de 401/403/404/409/422/429 y campos/Retry-After; pérdida de conexión y reintento; permisos revocados; revalidación; credencial corrupta; fallos al guardar o borrar de almacenamiento seguro; deduplicación de GET y separación de POST distintos; configuración inválida; IDs de navegación; ausencia de logs y almacenamiento inseguro en código de autenticación.
+La suite original de 29 casos verificó: login correcto e incorrecto; cuerpo y Bearer según operación; doble pulsación; contexto global de fetch; expiración durante guardado; restauración bloqueada hasta `/me`; expiración al abrir y con sesión activa; expiración mientras llega `/me`; 401 JSON y no JSON; revocación durante sesión; logout y logout sin conexión; acceso sin token; catálogo público vacío; 404; interpretación de 401/403/404/409/422/429 y campos/Retry-After; pérdida de conexión y reintento; permisos revocados; revalidación; credencial corrupta; fallos al guardar o borrar de almacenamiento seguro; deduplicación de GET y separación de POST distintos; configuración inválida; IDs de navegación; ausencia de logs y almacenamiento inseguro en código de autenticación.
 
 El almacenamiento se sustituye por un adaptador en memoria en estas pruebas. La inspección de código verifica el uso de SecureStore en nativo, pero no demuestra ejecución del Keychain o Keystore en un dispositivo real.
 
 ### Navegador con contrato simulado
 
-El script [check-web.cjs](../scripts/check-web.cjs) sirve la exportación local y sustituye las respuestas HTTP por fixtures de OpenAPI, sin datos reales. Comprueba:
+El script [check-web.cjs](../scripts/check-web.cjs) sirve la exportación local e intercepta un origen HTTPS sintético con fixtures de OpenAPI. La primera ejecución documentó estos nueve controles:
 
 1. Enlaces directos a cuenta, chat, reserva y pago sin sesión: login sin identidad privada.
 2. Validación local; login 401, 422 por campo y 429.
@@ -63,6 +65,8 @@ El script [check-web.cjs](../scripts/check-web.cjs) sirve la exportación local 
 7. Chat, reserva y pago sin acciones reales; perfil de cuenta y POST logout con Bearer.
 8. Expiración de una sesión corta con la pantalla abierta.
 9. Recarga de la vista web exige login; catálogo nunca envía Bearer; sin errores de página.
+
+La revisión de seguridad añade dos grupos: redirección 307 de HTTPS a HTTP bloqueada y catálogo que rechaza JSON malformado y 503 sin JSON, con reintento de lectura.
 
 Evidencia con nombres, correo y mensajes **sintéticos**:
 
@@ -80,21 +84,21 @@ New-Item -ItemType Directory -Force .\work\browser-tools | Out-Null
 npm.cmd install --prefix .\work\browser-tools playwright
 .\work\browser-tools\node_modules\.bin\playwright.cmd install chromium
 $env:TEKORA_PLAYWRIGHT_PATH = (Resolve-Path .\work\browser-tools\node_modules\playwright).Path
-$env:EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:18013/api/v1'
+$env:EXPO_PUBLIC_API_BASE_URL = 'https://tekora-api.example.test/api/v1'
 npx.cmd expo export --platform web --output-dir work/10a-web-preview
 node .\scripts\check-web.cjs
 Remove-Item Env:EXPO_PUBLIC_API_BASE_URL
 Remove-Item Env:TEKORA_PLAYWRIGHT_PATH
 ```
 
-Usar los puertos 18080 y 18013 libres. La dirección 127.0.0.1 es exclusivamente del ensayo de navegador en el mismo equipo: **no** es la configuración para el teléfono físico. Las peticiones a 18013 son interceptadas por el script; no arranca un Laravel falso ni contacta otro backend. Capturas y resultados nuevos quedan en `work/10a-browser-evidence`, fuera del seguimiento Git.
+Usar el puerto 18080 libre. Playwright intercepta el origen HTTPS sintético. El puerto 18013 es un destino de redirección de prueba que debe quedar sin peticiones. El ensayo no arranca Laravel ni contacta otro backend. Capturas y resultados nuevos quedan en `work/10a-browser-evidence`, fuera del seguimiento Git.
 
 ## Riesgos y pendientes
 
 - No se ejecutó la app en Android/iOS, Expo Go, emulador ni teléfono físico. Falta comprobar SecureStore real, arranque/restauración nativa, deep links, suspensión y retorno a primer plano, teclado y disposición en distintos tamaños.
 - No se probó una instancia Laravel real accesible. Los transportes simulados verifican el cliente y la interfaz; falta la validación de extremo a extremo en la LAN aislada con la API 9B. Seguir [ETAPA-10A.md](ETAPA-10A.md).
 - Doctor requiere completar dos comprobaciones remotas. npm advierte que la línea ESLint 9.39.5 está deprecada; se usó la versión resuelta por Expo para esta configuración y no se alteraron librerías existentes para una actualización mayor de herramientas.
-- Un logout sin red elimina la sesión local y avisa que la revocación no se confirmó. El token servidor podría seguir válido hasta caducar o revocarse; no se afirma lo contrario.
-- La vista web solo conserva sesión en memoria. La persistencia de sesión exigida se implementa en Android/iOS mediante SecureStore.
+- Un logout sin red bloquea inmediatamente la sesión local, intenta borrar el registro seguro y avisa que la revocación no se confirmó. El token servidor podría seguir válido hasta caducar o revocarse; no se afirma lo contrario.
+- La sesión activa vive en memoria. SecureStore protege el registro nativo, que nunca autoriza restauración tras reiniciar el proceso.
 - La API no entrega precios, distancias, reputación, verificación ni fotografías. La UI no los inventa. Reseñas, favoritos, historial, edición de cuenta, Google/Apple/registro, chat, publicación, reserva y pagos siguen pendientes de contratos posteriores.
 - El PR permanece en borrador, sin merge, despliegue, cambios de backend o credenciales reales. Se espera revisión independiente de ChatGPT y aprobación del usuario.

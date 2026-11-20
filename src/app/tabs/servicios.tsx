@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { ApiState, Pagination } from '@/components/api-state';
 import { PreparationNotice } from '@/components/preparation-notice';
 import { useApiResource } from '@/hooks/use-api-resource';
-import { modalityLabels, type Collection, type Service } from '@/api/types';
+import { isServiceCollection, modalityLabels, type Service } from '@/api/types';
 
 
 export default function ServiciosScreen() {
@@ -15,7 +15,7 @@ export default function ServiciosScreen() {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const services = useApiResource<Collection<Service>>(`/services?page=${page}&q=${encodeURIComponent(search)}`);
+  const services = useApiResource(`/services?page=${page}&q=${encodeURIComponent(search)}`, isServiceCollection);
   const router = useRouter();
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

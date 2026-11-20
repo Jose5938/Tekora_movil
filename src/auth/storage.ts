@@ -7,7 +7,6 @@ const DEVICE_KEY = 'tekora.mobile.device';
 const options = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 
 export const sessionStorage: SessionStorage = {
-  read: () => SecureStore.getItemAsync(SESSION_KEY),
   write: value => SecureStore.setItemAsync(SESSION_KEY, value, options),
   remove: () => SecureStore.deleteItemAsync(SESSION_KEY),
   async deviceName() {

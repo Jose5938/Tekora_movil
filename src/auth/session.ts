@@ -1,8 +1,7 @@
 import { ApiClient, ApiError, errorMessage } from '../api/http';
-import type { ClientUser, LoginData, Resource } from '../api/types';
+import { isClientUser, isLoginData, isRecord, isResource, type ClientUser } from '../api/types';
 
 export interface SessionStorage {
-  read(): Promise<string | null>;
   write(value: string): Promise<void>;
   remove(): Promise<void>;
   deviceName(): Promise<string>;
@@ -15,29 +14,24 @@ export type SessionState = {
   message: string | null;
 };
 
-function validCredential(value: unknown): value is Credential {
-  const item = value as Credential | null;
-  return !!item && typeof item.access_token === 'string' && item.access_token.length > 0 &&
-    typeof item.expires_at === 'string' && Number.isFinite(Date.parse(item.expires_at));
-}
-function validUser(user: ClientUser): boolean {
-  return !!user && Number.isSafeInteger(user.id) && user.id > 0 && typeof user.name === 'string' &&
-    typeof user.email === 'string' && user.experience === 'client' && Array.isArray(user.permissions);
-}
+const expiredMessage = 'Tu sesión expiró. Inicia sesión de nuevo.';
+const unconfirmedLogout = 'No se pudo confirmar la revocación en el servidor. Vuelve a iniciar sesión con este dispositivo cuando haya conexión.';
 
 export class SessionController {
   private state: SessionState = { status: 'checking', user: null, expiresAt: null, message: null };
   private credential: Credential | null = null;
   private listeners = new Set<() => void>();
   private operation: Promise<void> | null = null;
+  private closing: Promise<void> | null = null;
   private deletion: Promise<void> | null = null;
-  private discard = false;
+  private generation = 0;
+  private cleanupNotice: string | null = null;
 
   constructor(private api: ApiClient, private storage: SessionStorage, private now = Date.now) {
     api.setSessionHandlers(() => {
       if (!this.credential) return null;
       if (Date.parse(this.credential.expires_at) <= this.now()) {
-        void this.clear('Tu sesión expiró. Inicia sesión de nuevo.');
+        void this.clear(expiredMessage);
         return null;
       }
       return this.credential.access_token;
@@ -49,98 +43,136 @@ export class SessionController {
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private update(state: SessionState) { this.state = state; this.listeners.forEach(listener => listener()); }
-  private exclusive(action: () => Promise<void>): Promise<void> {
+
+  private exclusive(action: (generation: number) => Promise<void>): Promise<void> {
+    if (this.closing) return this.closing;
     if (this.operation) return this.operation;
-    this.operation = action().finally(() => { this.operation = null; });
+    const generation = this.generation;
+    this.operation = Promise.resolve().then(() => action(generation)).finally(() => { this.operation = null; });
     return this.operation;
   }
 
-  private clear(message: string | null = null): Promise<void> {
+  private invalidate(message: string | null): number {
+    const generation = ++this.generation;
     this.credential = null;
-    this.discard = true;
+    this.cleanupNotice = message;
     this.update({ status: 'checking', user: null, expiresAt: null, message });
-    if (this.deletion) return this.deletion;
-    this.deletion = this.storage.remove().then(() => {
-      this.discard = false;
-      this.update({ status: 'anonymous', user: null, expiresAt: null, message });
-    }, () => {
-      this.update({ status: 'error', user: null, expiresAt: null, message: 'No se pudo borrar la sesión del almacenamiento seguro. Reintenta.' });
-    }).finally(() => { this.deletion = null; });
-    return this.deletion;
+    return generation;
   }
 
-  restore = (): Promise<void> => this.exclusive(async () => {
-    this.update({ status: 'checking', user: null, expiresAt: null, message: null });
-    if (this.discard) { await this.clear(); return; }
+  private async removeStored(generation: number, message: string | null) {
+    if (generation === this.generation) this.cleanupNotice = message;
+    this.deletion ??= Promise.resolve().then(() => this.storage.remove()).finally(() => { this.deletion = null; });
     try {
-      const raw = await this.storage.read();
-      if (!raw) { await this.clear(); return; }
-      let saved: unknown;
-      try { saved = JSON.parse(raw); } catch { await this.clear(); return; }
-      if (!validCredential(saved) || Date.parse(saved.expires_at) <= this.now()) {
-        await this.clear('Tu sesión expiró. Inicia sesión de nuevo.'); return;
+      await this.deletion;
+      if (generation === this.generation) this.update({ status: 'anonymous', user: null, expiresAt: null, message });
+    } catch {
+      if (generation === this.generation) {
+        const failure = 'No se pudo borrar la sesión del almacenamiento seguro. Reintenta.';
+        this.update({ status: 'error', user: null, expiresAt: null, message: message ? `${message} ${failure}` : failure });
       }
-      this.credential = saved;
-      await this.validateIdentity();
-    } catch (error) { this.restoreError(error); }
+    }
+  }
+
+  private clear(message: string | null = null) {
+    return this.removeStored(this.invalidate(message), message);
+  }
+
+  // A persisted credential cannot prove that a previous process finished logout.
+  // Only a successful login in this process can install a credential.
+  restore = (): Promise<void> => this.credential ? this.revalidate() : this.exclusive(async generation => {
+    if (generation === this.generation) await this.clear(this.cleanupNotice);
   });
 
-  revalidate = (): Promise<void> => this.exclusive(async () => {
-    if (!this.credential) return;
-    this.update({ ...this.state, status: 'checking', user: null });
-    try { await this.validateIdentity(); } catch (error) { this.restoreError(error); }
-  });
-
-  private async validateIdentity() {
+  revalidate = (): Promise<void> => this.exclusive(async generation => {
     const expected = this.credential;
-    const { data: user } = await this.api.request<Resource<ClientUser>>('/me', { authenticated: true });
-    if (this.credential !== expected || !expected) return;
-    if (Date.parse(expected.expires_at) <= this.now()) { await this.clear('Tu sesión expiró.'); return; }
-    if (!validUser(user)) throw new ApiError(0, 'invalid_response', 'El servidor devolvió una identidad no válida.');
-    this.update({ status: 'authenticated', user, expiresAt: expected.expires_at, message: null });
+    if (generation !== this.generation || !expected) return;
+    this.update({ ...this.state, status: 'checking', user: null });
+    try {
+      const result = await this.api.request<unknown>('/me', { authenticated: true });
+      if (generation !== this.generation) return;
+      if (Date.parse(expected.expires_at) <= this.now()) { await this.clear(expiredMessage); return; }
+      if (!isResource(result, isClientUser)) {
+        throw new ApiError(200, 'invalid_response', 'El servidor devolvió una identidad no válida.');
+      }
+      this.update({ status: 'authenticated', user: result.data, expiresAt: expected.expires_at, message: null });
+    } catch (error) {
+      if (generation !== this.generation) return;
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        await this.clear(error.message);
+        return;
+      }
+      this.update({ status: 'error', user: null, expiresAt: expected.expires_at, message: errorMessage(error) });
+    }
+  });
+
+  private async revoke(token: string): Promise<boolean> {
+    try {
+      const result = await this.api.revoke(token);
+      return isRecord(result) && isRecord(result.data) && result.data.revoked === true;
+    } catch {
+      return false;
+    }
   }
 
-  private restoreError(error: unknown) {
-    if (error instanceof ApiError && error.status === 401) return; // HTTP handler already cleared it.
-    if (error instanceof ApiError && error.status === 403) { void this.clear(error.message); return; }
-    this.update({ status: 'error', user: null, expiresAt: this.credential?.expires_at ?? null, message: errorMessage(error) });
-  }
-
-  login = (email: string, password: string): Promise<void> => this.exclusive(async () => {
-    const device_name = await this.storage.deviceName();
-    const { data } = await this.api.request<Resource<LoginData>>('/auth/login', {
+  login = (email: string, password: string): Promise<void> => this.exclusive(async generation => {
+    if (generation !== this.generation || this.credential) return;
+    if (this.deletion) {
+      throw new ApiError(0, 'secure_storage', 'Espera a que termine el cierre de sesión.');
+    }
+    let device_name: string;
+    try { device_name = await this.storage.deviceName(); } catch {
+      throw new ApiError(0, 'secure_storage', 'No se pudo acceder al almacenamiento seguro. Reintenta.');
+    }
+    if (generation !== this.generation) return;
+    const result = await this.api.request<unknown>('/auth/login', {
       method: 'POST', body: { email: email.trim(), password, device_name },
     });
-    if (!validCredential(data) || data.token_type !== 'Bearer' || !validUser(data.user) || Date.parse(data.expires_at) <= this.now()) {
-      throw new ApiError(0, 'invalid_response', 'El servidor devolvió una sesión no válida.');
+    if (!isResource(result, isLoginData)) {
+      throw new ApiError(201, 'invalid_response', 'El servidor devolvió una sesión no válida.');
     }
-    this.credential = { access_token: data.access_token, expires_at: data.expires_at };
-    try { await this.storage.write(JSON.stringify(this.credential)); } catch {
-      try { await this.api.request('/auth/logout', { method: 'POST', authenticated: true }); } catch { /* Best-effort revocation; never log the credential. */ }
-      await this.clear();
+    const { data } = result;
+    if (generation !== this.generation || Date.parse(data.expires_at) <= this.now()) {
+      await this.revoke(data.access_token);
+      if (generation === this.generation) throw new ApiError(401, 'expired_session', expiredMessage);
+      return;
+    }
+    const credential = { access_token: data.access_token, expires_at: data.expires_at };
+    try { await this.storage.write(JSON.stringify(credential)); } catch {
+      const revoked = await this.revoke(credential.access_token);
+      if (generation === this.generation) await this.clear(revoked ? null : unconfirmedLogout);
       throw new ApiError(0, 'secure_storage', 'No se pudo guardar la sesión de forma segura. Reintenta.');
     }
-    if (!this.credential || Date.parse(data.expires_at) <= this.now()) {
-      await this.clear('Tu sesión expiró. Inicia sesión de nuevo.');
-      throw new ApiError(401, 'expired_session', 'Tu sesión expiró. Inicia sesión de nuevo.');
+    if (generation !== this.generation) {
+      await this.revoke(credential.access_token);
+      return;
     }
+    if (Date.parse(credential.expires_at) <= this.now()) {
+      await this.clear(expiredMessage);
+      throw new ApiError(401, 'expired_session', expiredMessage);
+    }
+    this.credential = credential;
     this.update({ status: 'authenticated', user: data.user, expiresAt: data.expires_at, message: null });
   });
 
-  logout = (): Promise<void> => this.exclusive(async () => {
-    let message: string | null = null;
-    try {
-      const { data } = await this.api.request<Resource<{ revoked: boolean }>>('/auth/logout', { method: 'POST', authenticated: true });
-      if (data?.revoked !== true) throw new Error();
-    } catch (error) {
-      if (!(error instanceof ApiError && error.status === 401)) {
-        message = 'Sesión local cerrada. No se pudo confirmar la revocación en el servidor. Vuelve a iniciar sesión con este dispositivo cuando haya conexión.';
-      }
-    } finally { await this.clear(message); }
-  });
+  logout = (): Promise<void> => {
+    if (this.closing) return this.closing;
+    const previous = this.operation;
+    const credential = this.credential;
+    let generation: number;
+    this.closing = Promise.resolve().then(async () => {
+      const revoked = credential ? this.revoke(credential.access_token) : Promise.resolve(true);
+      // Let an interrupted login finish touching storage before deleting the old record.
+      await previous?.catch(() => {});
+      const message = await revoked ? this.cleanupNotice : unconfirmedLogout;
+      await this.removeStored(generation, message);
+    }).finally(() => { this.closing = null; });
+    generation = this.invalidate(this.cleanupNotice);
+    return this.closing;
+  };
 
   checkExpiration = () => {
-    if (this.credential && Date.parse(this.credential.expires_at) <= this.now()) return this.clear('Tu sesión expiró. Inicia sesión de nuevo.');
+    if (this.credential && Date.parse(this.credential.expires_at) <= this.now()) return this.clear(expiredMessage);
     return Promise.resolve();
   };
 }

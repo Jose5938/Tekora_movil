@@ -7,13 +7,13 @@ import NavegacionPersonalizada from '@/components/navegacion-personalizada';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiState } from '@/components/api-state';
 import { PreparationNotice } from '@/components/preparation-notice';
-import { resourceId, type Provider, type Resource } from '@/api/types';
+import { isProviderResource, resourceId } from '@/api/types';
 
 export default function PerfilExpertoScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const providerId = resourceId(id);
-  const resource = useApiResource<Resource<Provider>>(providerId ? `/providers/${providerId}` : null);
+  const resource = useApiResource(providerId ? `/providers/${providerId}` : null, isProviderResource);
   const provider = resource.data?.data;
   const [modalVisible, setModalVisible] = useState(false);
 

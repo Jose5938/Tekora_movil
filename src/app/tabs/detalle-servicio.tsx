@@ -6,13 +6,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiState } from '@/components/api-state';
 import { PreparationNotice } from '@/components/preparation-notice';
-import { modalityLabels, resourceId, type Resource, type Service } from '@/api/types';
+import { isServiceResource, modalityLabels, resourceId } from '@/api/types';
 
 export default function DetalleServicioScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const serviceId = resourceId(id);
-  const resource = useApiResource<Resource<Service>>(serviceId ? `/services/${serviceId}` : null);
+  const resource = useApiResource(serviceId ? `/services/${serviceId}` : null, isServiceResource);
   const service = resource.data?.data;
   return (
     <SafeAreaView style={styles.safeArea}>

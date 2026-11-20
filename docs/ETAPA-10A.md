@@ -25,13 +25,13 @@ Las únicas pantallas con contenido ilustrativo son chat (dos mensajes de ejempl
 
 ## HTTP, sesión y navegación
 
-- `src/api/http.ts`: JSON, errores de red, timeout de 15 segundos, campos `error.code/message/fields`, estados 401/403/404/409/422/429 y `Retry-After`. No reintenta automáticamente escrituras. Combina peticiones concurrentes al mismo endpoint y credencial; no usa contraseñas como claves de deduplicación. El formulario y el controlador bloquean envíos repetidos.
+- `src/api/http.ts`: JSON, errores de red, timeout de 15 segundos, campos `error.code/message/fields`, estados 401/403/404/409/422/429/503 y `Retry-After`, incluso en errores sin JSON. No reintenta automáticamente escrituras. Combina peticiones concurrentes al mismo endpoint y credencial; no usa contraseñas como claves de deduplicación. El formulario y el controlador bloquean envíos repetidos.
 - Solo `/me` y `/auth/logout` reciben Bearer; el catálogo sigue siendo público incluso al usarlo desde una sesión autenticada. No se envían cookies web.
-- `src/auth/session.ts`: restaura la credencial y comprueba `GET /me` antes de permitir acceso privado. Revalida al volver a primer plano; comprueba expiración mediante temporizador y antes de usar el token. Un 401 protegido, incluso sin JSON, elimina la credencial. Un 401 del formulario no abre sesión. Un 403 durante `/me` también retira acceso.
-- En Android/iOS, `expo-secure-store` guarda solo token y expiración, más una etiqueta estable de instalación independiente. La identidad se obtiene de `/me`; no se guarda la contraseña. Se usa `WHEN_UNLOCKED_THIS_DEVICE_ONLY` en iOS. No hay tokens en logs, URLs, AsyncStorage ni variables `EXPO_PUBLIC_`.
+- `src/auth/session.ts`: al iniciar un proceso nuevo descarta la credencial persistida y exige login. Revalida la sesión activa con `GET /me` al volver a primer plano; comprueba expiración mediante temporizador y antes de usar el token. Un 401 protegido, incluso sin JSON, elimina la credencial. Un 401 del formulario no abre sesión. Un 403 durante `/me` también retira acceso.
+- En Android/iOS, `expo-secure-store` guarda solo token y expiración, más una etiqueta estable de instalación independiente. La identidad se obtiene de login y se revalida en `/me`; no se guarda la contraseña. Se usa `WHEN_UNLOCKED_THIS_DEVICE_ONLY` en iOS. No hay tokens en logs, URLs, AsyncStorage ni variables `EXPO_PUBLIC_`.
 - SecureStore no ofrece almacenamiento web. En esa plataforma la credencial solo vive en memoria; recargar exige login. No hay fallback a localStorage, sessionStorage o cookies. La etiqueta web cambia al recargar.
-- El logout intenta `POST /auth/logout` y elimina la credencial local en todos los casos. Si no se confirma la revocación, el login muestra un aviso explícito; no se afirma que el servidor haya revocado el token. En nativo, un login posterior con la misma etiqueta reemplaza el token anterior según el contrato. En web, recargar cambia la etiqueta y no garantiza ese reemplazo: un token no revocado puede durar hasta su expiración o revocación del lado servidor.
-- Si falla el borrado seguro, se bloquea el acceso y se ofrece reintentar. Si falla la conexión durante restauración, se muestra una pantalla de error sin datos privados; reintentar vuelve a comprobar `/me`.
+- El logout bloquea de inmediato el acceso privado, intenta `POST /auth/logout` y solicita el borrado de la credencial local. Si no se confirma la revocación, el login muestra un aviso explícito; no se afirma que el servidor haya revocado el token. En nativo, un login posterior con la misma etiqueta reemplaza el token anterior según el contrato. En web, recargar cambia la etiqueta y no garantiza ese reemplazo: un token no revocado puede durar hasta su expiración o revocación del lado servidor.
+- Si falla el borrado seguro, el acceso permanece bloqueado, incluso después de reiniciar. Si falla la conexión durante la revalidación en el mismo proceso, reintentar vuelve a comprobar `/me`. Las respuestas de catálogo se validan antes de mostrarlas. [Garantías y pruebas](SEGURIDAD-10A.md#correcciones-de-seguridad-del-20-de-noviembre-de-2026).
 - `Stack.Protected` protege todo `tabs` y la ruta de ejemplo `explore`. Durante la comprobación de sesión se muestra únicamente un estado neutro. La barra inferior se movió fuera de `src/app` para que no se registre como pantalla; se corrigieron sus rutas activas y se usa `router.navigate` para los accesos inferiores.
 
 No hay refresh token. La revocación del lado servidor se detecta en la siguiente comprobación de identidad o respuesta 401 protegida; el catálogo público no comprueba identidad.
@@ -66,10 +66,11 @@ Copy-Item .env.example .env.local
 notepad .env.local
 ```
 
-Sustituir únicamente `IP_LOCAL_DEL_EQUIPO` por la dirección LAN del equipo que ejecuta el backend:
+Configurar la URL HTTPS canónica del backend. Para usar HTTP en una red de laboratorio aislada, configurar explícitamente estas dos variables en el servidor Metro de desarrollo y sustituir `192.168.1.20` por la IPv4 privada literal del equipo que ejecuta el backend:
 
 ```dotenv
-EXPO_PUBLIC_API_BASE_URL=http://IP_LOCAL_DEL_EQUIPO:8013/api/v1
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.20:8013/api/v1
+EXPO_PUBLIC_ALLOW_LOCAL_HTTP=1
 ```
 
 Esta variable solo contiene una dirección pública de configuración. No introducir tokens, contraseñas, claves Laravel ni secretos. `.env.local` está ignorado por Git. Reiniciar Metro tras editarla:
@@ -100,7 +101,7 @@ No se ejecutaron Windows, emuladores ni dispositivos físicos en esta entrega.
 3. Equipo y teléfono deben estar en la misma red local de prueba sin aislamiento entre clientes. Consultar `ipconfig` para elegir la IPv4 de esa interfaz. El firewall debe permitir el puerto 8013 desde esa red privada y el acceso al servidor Metro de Expo. No redirigir puertos del router ni publicar el servidor en Internet.
 4. Abrir en el navegador del teléfono `http://IP_LOCAL_DEL_EQUIPO:8013/api/v1/services`. Debe responder JSON. Después usar esa misma base, terminada en `/api/v1`, en `.env.local`.
 5. `127.0.0.1` y `localhost` en un teléfono físico apuntan al propio teléfono, no al equipo que ejecuta Laravel. `0.0.0.0` es la dirección de escucha del servidor; tampoco se usa como URL del cliente.
-6. Iniciar la app y entrar con una cuenta solicitante de esa base aislada. Los datos de Google/Apple no sirven para este formulario. HTTPS es necesario fuera de esta LAN de desarrollo; SecureStore no cifra el tráfico HTTP.
+6. Iniciar la app y entrar con una cuenta solicitante de esa base aislada. Los datos de Google/Apple no sirven para este formulario. La distribución exige HTTPS incluso en redes privadas. SecureStore protege el almacenamiento local; los datos enviados por HTTP de laboratorio viajan sin cifrar.
 7. Si la vista web falla por CORS, corresponde revisar la configuración de ese backend por separado. La app nativa no depende de CORS del navegador. No cambiar Laravel como parte de este PR para ocultar ese problema.
 
 ## Controles reproducibles con Laravel
@@ -112,7 +113,8 @@ Ejecutar con cuentas y recursos de prueba del entorno aislado, sin grabar cabece
 | Login correcto | Inicio con nombre de `/auth/login`, prestadores públicos y cuenta real |
 | Contraseña incorrecta | 401 visible; permanece en login y no se guarda credencial |
 | Campos inválidos / límite de intentos | Validación local o 422 por campo; 429 visible sin sesión falsa |
-| Cerrar y reabrir app nativa | Estado neutro hasta `/me`; solo entonces se muestra el área privada |
+| Terminar el proceso y reabrir la app nativa | Se exige login explícito. La credencial persistida nunca se usa para consultar `/me` |
+| Volver a primer plano dentro del mismo proceso | Estado neutro hasta comprobar `/me` con la credencial vigente |
 | Revocar token en entorno aislado y volver a primer plano | `/me` devuelve 401; se elimina el token y aparece login |
 | Expiración | Login al caducar; el reloj inyectado en `npm test` verifica este caso sin cambiar la hora del sistema |
 | Logout desde inicio o cuenta | `POST /auth/logout`; `/me` con el token anterior da 401; reiniciar app no restaura sesión |

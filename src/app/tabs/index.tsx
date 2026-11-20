@@ -7,7 +7,7 @@ import NavegacionPersonalizada from '@/components/navegacion-personalizada';
 import { useSession } from '@/auth/context';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiState, Pagination } from '@/components/api-state';
-import type { Collection, Provider } from '@/api/types';
+import { isProviderCollection, type Provider } from '@/api/types';
 
 export default function HomeScreen() {
   const router = useRouter(); // 2. Inicializamos el router
@@ -17,7 +17,7 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const providers = useApiResource<Collection<Provider>>(`/providers?page=${page}&q=${encodeURIComponent(search)}`);
+  const providers = useApiResource(`/providers?page=${page}&q=${encodeURIComponent(search)}`, isProviderCollection);
   const cerrarSesion = async () => {
     if (closing) return;
     setClosing(true);
