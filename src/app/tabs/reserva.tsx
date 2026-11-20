@@ -60,6 +60,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   iconButton: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 14 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 14, width: '100%', maxWidth: 720, alignSelf: 'center' },
   heroSection: { alignItems: 'center', marginBottom: 10, gap: 8 },
 });

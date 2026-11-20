@@ -23,6 +23,13 @@ export function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : 'No fue posible completar la operación. Reintenta.';
 }
 
+export function retryDeadline(error: unknown, now = Date.now()): number {
+  if (!(error instanceof ApiError) || (error.status !== 429 && error.status !== 503) || !error.retryAfter) return 0;
+  const value = error.retryAfter.trim();
+  const deadline = /^\d+$/.test(value) ? now + Number(value) * 1000 : Date.parse(value);
+  return Number.isSafeInteger(deadline) && deadline > now ? deadline : 0;
+}
+
 type Options = { method?: 'GET' | 'POST' | 'PATCH'; body?: unknown; authenticated?: boolean };
 type Transport = (url: string, init: RequestInit) => Promise<Pick<Response,
   'ok' | 'status' | 'headers' | 'json' | 'redirected' | 'type'>>;

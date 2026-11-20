@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   iconButton: { padding: 6 },
   background: { backgroundColor: '#f8f9fa' },
-  content: { padding: 20, gap: 14 },
+  content: { padding: 20, gap: 14, width: '100%', maxWidth: 720, alignSelf: 'center' },
   card: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5ecf3', borderRadius: 16, padding: 16, gap: 10 },
   heading: { color: '#1a1a1a', fontWeight: 'bold', fontSize: 18 },
   body: { color: '#555', lineHeight: 21 },

@@ -95,6 +95,18 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <View style={styles.shortcuts}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mis solicitudes" style={styles.shortcut}
+            onPress={() => router.push({ pathname: '/tabs/servicios', params: { vista: 'historial' } })}>
+            <Ionicons name="clipboard-outline" size={20} color="#005b9f" />
+            <Text style={styles.shortcutText}>Mis solicitudes</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mis reservas" style={styles.shortcut} onPress={() => router.push('/tabs/reserva')}>
+            <Ionicons name="calendar-outline" size={20} color="#005b9f" />
+            <Text style={styles.shortcutText}>Mis reservas</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Sección de Categorías */}
         <Text style={styles.sectionTitle}>Explora Tekora</Text>
         <View style={styles.categoriesContainer}>
@@ -151,6 +163,10 @@ const ExpertCard = ({ provider, onPress }: { provider: Provider, onPress: () => 
   </TouchableOpacity>
 );
 const styles = StyleSheet.create({
+  shortcuts: { marginHorizontal: 20, marginBottom: 16, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  shortcut: { flexGrow: 1, flexBasis: 120, minHeight: 44, padding: 10, borderRadius: 12,
+    backgroundColor: '#e1f5fe', gap: 8, flexDirection: 'row', alignItems: 'center' },
+  shortcutText: { color: '#005b9f', fontWeight: '600', flexShrink: 1 },
   noticeBadge: { position: 'absolute', right: -4, top: -4, backgroundColor: '#005b9f', color: '#fff',
     paddingHorizontal: 4, borderRadius: 8, textAlign: 'center', fontSize: 10, fontWeight: 'bold' },
   safeArea: { flex: 1, backgroundColor: '#fff' },

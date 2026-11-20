@@ -25,7 +25,7 @@ export default function DetalleServicioScreen() {
         <Text style={styles.headerTitle}>Detalle del servicio</Text>
         <TouchableOpacity accessibilityLabel="Actualizar servicio" style={styles.iconButton} onPress={resource.retry}><Ionicons name="refresh-outline" size={24} color="#1a1a1a" /></TouchableOpacity>
       </View>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <ApiState {...resource} />
         {service && <>
           <View style={styles.specsCard}>

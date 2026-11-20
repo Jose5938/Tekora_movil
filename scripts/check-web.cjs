@@ -220,7 +220,7 @@ const results=[];
       else if(path==='/services' && mode==='malformed') body={data:{...service},meta};
       else if(path==='/services' && mode==='unavailable') {
         await route.fulfill({status:503,contentType:'text/html',body:'<p>Unavailable</p>',
-          headers:{'Retry-After':'45','Access-Control-Allow-Origin':'http://127.0.0.1:18080','Access-Control-Expose-Headers':'Retry-After'}});
+          headers:{'Retry-After':'2','Access-Control-Allow-Origin':'http://127.0.0.1:18080','Access-Control-Expose-Headers':'Retry-After'}});
         return;
       }
       else if(path==='/services') body={data:mode==='empty'?[]:[service],meta:{...meta,total:mode==='empty'?0:1}};
@@ -307,10 +307,15 @@ const results=[];
     mode='unavailable';
     await page.getByText('Reintentar',{exact:true}).click();
     await visible('Tekora no está disponible temporalmente. Inténtalo más tarde.');
+    const retryUnavailable=page.getByRole('button',{name:'Reintentar',exact:true});
+    assert.equal(await retryUnavailable.isDisabled(),true);
+    const totalServiceReads=requests.filter(r=>r.path==='/services' && r.method==='GET').length;
+    await page.getByLabel('Actualizar catálogo',{exact:true}).click();
+    assert.equal(requests.filter(r=>r.path==='/services' && r.method==='GET').length,totalServiceReads);
     mode='normal';
     await page.getByText('Reintentar',{exact:true}).click();
     await visible('Soporte de computadoras');
-    results.push('Catálogo rechaza JSON malformado y 503 no JSON; permite reintento de lectura.');
+    results.push('Catálogo rechaza JSON malformado y 503, bloquea reintento hasta Retry-After y luego recupera la lectura.');
 
     await page.getByRole('tab',{name:'Historial',exact:true}).click();
     await visible('Todavía no tienes solicitudes.');
@@ -493,6 +498,18 @@ const results=[];
     await page.reload();
     await visible('Te damos la bienvenida a Tekora');
     results.push('Recargar vista web exige login, sin almacenamiento inseguro.');
+    await page.setViewportSize({width:320,height:720});
+    await signIn('válida-sintética');
+    await visible('Expertos publicados');
+    await page.getByRole('button',{name:'Mis solicitudes',exact:true}).click();
+    await visible('Mis solicitudes');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await page.getByRole('button',{name:/Solicitud #42:/}).click();
+    await visible('Seguimiento');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await page.screenshot({path:join(evidence,'seguimiento-320.png'),fullPage:true});
+    results.push('Inicio enlaza al historial, con navegación accesible y sin desbordamiento horizontal a 320 px.');
+
     assert.ok(requests.filter(r=>r.method==='GET'&&(r.path.startsWith('/services')||r.path.startsWith('/providers'))).every(r=>!r.hasBearer));
     assert.deepEqual(errors,[]);
     writeFileSync(join(evidence,'results.json'),JSON.stringify({results,requests,consolePageErrors:errors},null,2));

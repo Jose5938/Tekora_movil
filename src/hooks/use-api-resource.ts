@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/api/client';
-import { ApiError } from '@/api/http';
+import { ApiError, retryDeadline } from '@/api/http';
 
 export function useApiResource<T>(path: string | null, validate: (value: unknown) => value is T, authenticated = false) {
   const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<{ path: string | null; attempt: number; data: T | null; error: unknown; loading: boolean }>({
+  const retryGate = useRef<{ path: string | null; until: number } | undefined>(undefined);
+  const [state, setState] = useState<{ path: string | null; attempt: number; data: T | null; error: unknown; loading: boolean; retryAt?: number }>({
     path, attempt: -1, data: null, error: null, loading: true,
   });
   useEffect(() => {
@@ -16,11 +17,18 @@ export function useApiResource<T>(path: string | null, validate: (value: unknown
     request.then(data => {
       if (active) setState({ path, attempt, data, error: null, loading: false });
     }, error => {
-      if (active) setState({ path, attempt, data: null, error, loading: false });
+      if (!active) return;
+      const retryAt = retryDeadline(error);
+      retryGate.current = { path, until: retryAt };
+      setState({ path, attempt, data: null, error, loading: false, retryAt });
     });
     return () => { active = false; };
   }, [path, attempt, validate, authenticated]);
-  const retry = useCallback(() => setAttempt(value => value + 1), []);
+  const retry = useCallback(() => {
+    const gate = retryGate.current;
+    if (gate?.path === path && gate.until > Date.now()) return;
+    setAttempt(value => value + 1);
+  }, [path]);
   const current = state.path === path && state.attempt === attempt;
-  return { data: current ? state.data : null, error: current ? state.error : null, loading: !current || state.loading, retry };
+  return { data: current ? state.data : null, error: current ? state.error : null, loading: !current || state.loading, retryAt: current ? state.retryAt : undefined, retry };
 }
