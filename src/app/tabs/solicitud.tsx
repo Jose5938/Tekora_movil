@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiError } from '@/api/http';
+import { readReadiness, readinessLabels } from '@/api/confirmation';
 import { inquiryLabels, inquiryPath, isInquiryResource, isJourneyResource, type ContractingJourney, type Inquiry } from '@/api/inquiries';
 import { resourceId, type Resource } from '@/api/types';
 import { ApiState } from '@/components/api-state';
@@ -72,12 +73,14 @@ export default function SolicitudScreen() {
 
 function JourneyDetails({ journey }: { journey: ContractingJourney }) {
   const { next_action: action, progress, history } = journey;
+  const readiness = readReadiness(journey.confirmation_readiness);
   return <>
     <View style={styles.card}>
       <Text style={styles.heading}>Siguiente paso</Text>
       <Text style={styles.action}>{action.label}</Text>
       <Text style={styles.body}>{action.description}</Text>
-      {action.interaction === 'navigate' && !['read_history', 'issue_quote', 'review_quote', 'propose_schedule'].includes(action.code) &&
+      {journey.reservation && <Text style={styles.meta}>{readinessLabels[readiness?.state ?? 'unknown']}</Text>}
+      {action.interaction === 'navigate' && !['read_history', 'issue_quote', 'review_quote', 'propose_schedule', 'confirm_reservation'].includes(action.code) &&
         <Text style={styles.meta}>{action.mobile_execution_available ? 'Esta acción aún no está integrada en la app.' : 'Esta acción solo está disponible fuera de la app.'}</Text>}
     </View>
     <View style={styles.card}>

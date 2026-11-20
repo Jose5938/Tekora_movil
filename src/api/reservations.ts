@@ -22,11 +22,12 @@ type ReservationIdentity = {
 export type Reservation = ReservationIdentity & {
   service_id: number; date: string; time: string; end_time: string;
   commercial_protocol?: 'quoted-slot-hold-v1'; quote_id?: string;
+  hold?: Pick<Hold, 'state' | 'version' | 'expires_at'> | null;
 };
 export type Hold = { state: 'held' | 'committed' | 'expired' | 'released'; version: number; expires_at: string; remaining_seconds: number; hold_seconds: 900 };
 export type ReservationContext = {
   reservation: ReservationIdentity; client: { id: number }; service: { id: number; title: string };
-  amount: Amount | null; server_now: string; hold: Hold | null;
+  amount: Amount | null; server_now: string; hold: Hold | null; confirmation_readiness?: unknown;
 };
 
 const positive = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
@@ -65,16 +66,20 @@ function isIdentity(value: unknown): value is ReservationIdentity {
 function isReservation(value: unknown): value is Reservation {
   return isRecord(value) && positive(value.service_id) && civilDate(value.date) && civilTime(value.time) &&
     typeof value.end_time === 'string' && (value.quote_id === undefined || isUuid(value.quote_id)) &&
-    (value.commercial_protocol === undefined || value.commercial_protocol === 'quoted-slot-hold-v1') && isIdentity(value);
+    (value.commercial_protocol === undefined || value.commercial_protocol === 'quoted-slot-hold-v1') &&
+    (value.hold === undefined || value.hold === null || isHoldIdentity(value.hold)) && isIdentity(value);
 }
 export const isReservationResource = (value: unknown): value is Resource<Reservation> => isResource(value, isReservation);
 export const isReservationCollection = (value: unknown): value is Collection<Reservation> => isCollection(value, isReservation);
 
-function isHold(value: unknown): value is Hold {
+function isHoldIdentity(value: unknown): value is Pick<Hold, 'state' | 'version' | 'expires_at'> {
   return isRecord(value) && ['held', 'committed', 'expired', 'released'].some(state => value.state === state) &&
-    positive(value.version) && instant(value.expires_at) && value.hold_seconds === 900 &&
+    positive(value.version) && instant(value.expires_at);
+}
+function isHold(value: unknown): value is Hold {
+  return isRecord(value) && value.hold_seconds === 900 &&
     typeof value.remaining_seconds === 'number' && Number.isInteger(value.remaining_seconds) &&
-    value.remaining_seconds >= 0 && value.remaining_seconds <= 900;
+    value.remaining_seconds >= 0 && value.remaining_seconds <= 900 && isHoldIdentity(value);
 }
 function isContext(value: unknown): value is ReservationContext {
   return isRecord(value) && isIdentity(value.reservation) && isRecord(value.client) && positive(value.client.id) &&

@@ -27,7 +27,8 @@ let logins=0, logouts=0;
 let inquiryCreated=false, inquiryReadMode='normal', inquiryPosts=0;
 let quotePhase=false, quoteIssued=false, quoteAccepted=false, acceptancePosts=0;
 const issueKeys=[];
-let reservationStatus=null, proposals=0, cancellations=0;
+let reservationStatus=null, proposals=0, cancellations=0, readinessState='web_checkout_required';
+const commitKeys=[];
 const proposalKeys=[];
 const requests=[];
 const results=[];
@@ -113,12 +114,25 @@ const results=[];
           status=201;body={data:getReservation()};
         }
       }
-      else if(path==='/reservations/17/cancel') {
+      else if(path==='/reservations/17/commit') {
         assert.ok(request.headers().authorization);
         assert.equal(request.method(),'PATCH');
         const { idempotency_key, ...intent }=request.postDataJSON();
         assert.match(idempotency_key,/^[0-9a-f-]{36}$/i);
         assert.deepEqual(intent,{version:8});
+        commitKeys.push(idempotency_key);
+        if(commitKeys.length===1) {
+          status=503;body=error('temporarily_unavailable','No se pudo verificar la confirmación.');
+        } else {
+          reservationStatus='confirmed';body={data:getReservation(reservationStatus)};
+        }
+      }
+      else if(path==='/reservations/17/cancel') {
+        assert.ok(request.headers().authorization);
+        assert.equal(request.method(),'PATCH');
+        const { idempotency_key, ...intent }=request.postDataJSON();
+        assert.match(idempotency_key,/^[0-9a-f-]{36}$/i);
+        assert.deepEqual(intent,{version:9});
         cancellations++;
         reservationStatus='cancelled';
         body={data:getReservation(reservationStatus)};
@@ -127,7 +141,7 @@ const results=[];
         assert.ok(request.headers().authorization);
         if(path==='/reservations') body={data:reservationStatus?[getReservation(reservationStatus)]:[],
           meta:{...collection.meta,total:reservationStatus?1:0}};
-        else body={data:path.endsWith('/checkout-context')?getContext(reservationStatus):getReservation(reservationStatus)};
+        else body={data:path.endsWith('/checkout-context')?getContext(reservationStatus,readinessState):getReservation(reservationStatus)};
       }
       else if(path==='/inquiries/42/quotes') {
         assert.ok(request.headers().authorization);
@@ -161,7 +175,7 @@ const results=[];
           status=503;body=error('temporarily_unavailable','No se puede consultar el seguimiento.');
         } else if (!quotePhase) body={data:path.endsWith('/journey')?journey:inquiry};
         else body={data:path.endsWith('/journey')?
-          (reservationStatus?getReservationJourney(reservationStatus):getQuoteJourney(quoteIssued?getQuote(quoteAccepted?'accepted':'pending'):null,quoteAccepted)):
+          (reservationStatus?getReservationJourney(reservationStatus,readinessState):getQuoteJourney(quoteIssued?getQuote(quoteAccepted?'accepted':'pending'):null,quoteAccepted)):
           {...inquiry,status:'accepted',accepted_at:inquiry.created_at}};
       }
       else if(mode==='offline') {await route.abort('failed');return;}
@@ -354,7 +368,24 @@ const results=[];
     await visible('Retención activa');
     await visible('Versión de reserva: 8');
     await visible('El plazo original es de 900 segundos. Volver a consultar no lo amplía.');
-    assert.equal(await page.getByRole('button',{name:'Confirmar contratación',exact:true}).count(),0);
+    await visible('Esta reserva requiere un paso fuera de la app.');
+    assert.equal(await page.getByRole('button',{name:'Revisar confirmación',exact:true}).count(),0);
+    assert.equal(commitKeys.length,0);
+    readinessState='ready';
+    await page.getByRole('button',{name:'Actualizar reserva',exact:true}).click();
+    await page.getByRole('button',{name:'Revisar confirmación',exact:true}).click();
+    assert.equal(commitKeys.length,0);
+    await page.getByRole('button',{name:'Confirmar contratación',exact:true}).click();
+    await visible('No se pudo comprobar la operación. Consulta el estado antes de repetirla.');
+    assert.equal(commitKeys.length,1);
+    await page.getByRole('button',{name:'Revisar confirmación',exact:true}).click();
+    await page.getByRole('button',{name:'Confirmar contratación',exact:true}).click();
+    await visible('Contratación confirmada por Tekora.');
+    await visible('Reserva confirmada');
+    assert.equal(commitKeys.length,2);
+    assert.equal(commitKeys[0],commitKeys[1]);
+    results.push('B2 bloquea el requisito web, confirma explícitamente con ambas lecturas y conserva UUID tras 503.');
+
     await page.getByRole('button',{name:'Cancelar reserva',exact:true}).click();
     assert.equal(cancellations,0);
     await page.getByRole('button',{name:'Confirmar cancelación',exact:true}).click();

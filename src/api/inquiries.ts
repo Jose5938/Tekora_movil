@@ -58,6 +58,7 @@ export type ContractingJourney = {
   next_action: JourneyAction;
   commercial: JourneyCommercial & { can_propose: boolean };
   reservation: { id: number; version: number; actions: string[] } | null;
+  confirmation_readiness?: unknown;
   history: { inquiry: HistoryEvent[]; reservations: HistoryReservation[] };
 };
 
