@@ -5,6 +5,7 @@ const { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } = require
 const { resolve, join, extname } = require('node:path');
 const assert = require('node:assert/strict');
 const { inquiry, journey, collection } = require('../tests/fixtures/inquiries.cjs');
+const { id: quoteId, getQuote, getQuoteJourney } = require('../tests/fixtures/quotes.cjs');
 const root = resolve(process.env.TEKORA_WEB_PREVIEW_DIR || 'work/10a-web-preview');
 const evidence = resolve(process.env.TEKORA_BROWSER_EVIDENCE_DIR || 'work/10a-browser-evidence');
 mkdirSync(evidence, { recursive: true });
@@ -23,6 +24,8 @@ const meta = { current_page:1, per_page:12, last_page:1, total:1 };
 let mode='normal';
 let logins=0, logouts=0;
 let inquiryCreated=false, inquiryReadMode='normal', inquiryPosts=0;
+let quotePhase=false, quoteIssued=false, quoteAccepted=false, acceptancePosts=0;
+const issueKeys=[];
 const requests=[];
 const results=[];
 (async () => {
@@ -84,12 +87,40 @@ const results=[];
         assert.ok(request.headers().authorization);
         body=inquiryCreated?collection:{...collection,data:[],meta:{...collection.meta,total:0}};
       }
+      else if(path==='/inquiries/42/quotes') {
+        assert.ok(request.headers().authorization);
+        if(request.method()==='POST') {
+          const input=request.postDataJSON();
+          assert.deepEqual(Object.keys(input),['idempotency_key']);
+          assert.match(input.idempotency_key,/^[0-9a-f-]{36}$/i);
+          issueKeys.push(input.idempotency_key);
+          if(issueKeys.length===1) {
+            status=503;body=error('temporarily_unavailable','No se pudo verificar la emisión.');
+          } else {
+            quoteIssued=true;body={data:getQuote()};
+          }
+        } else body={data:quoteIssued?[getQuote(quoteAccepted?'accepted':'pending')]:[],
+          meta:{...collection.meta,total:quoteIssued?1:0}};
+      }
+      else if(path===`/quotes/${quoteId}` || path===`/quotes/${quoteId}/accept`) {
+        assert.ok(request.headers().authorization);
+        if(path.endsWith('/accept')) {
+          assert.equal(request.method(),'POST');
+          assert.deepEqual(request.postDataJSON(),{acknowledge:true});
+          quoteAccepted=true;
+          acceptancePosts++;
+        }
+        body={data:getQuote(quoteAccepted?'accepted':'pending')};
+      }
       else if(path==='/inquiries/42' || path==='/inquiries/42/journey') {
         assert.ok(request.headers().authorization);
         if(inquiryReadMode==='missing') {status=404;body=error('not_found','El recurso no está disponible.');}
         else if(inquiryReadMode==='unavailable' && path.endsWith('/journey')) {
           status=503;body=error('temporarily_unavailable','No se puede consultar el seguimiento.');
-        } else body={data:path.endsWith('/journey')?journey:inquiry};
+        } else if (!quotePhase) body={data:path.endsWith('/journey')?journey:inquiry};
+        else body={data:path.endsWith('/journey')?
+          getQuoteJourney(quoteIssued?getQuote(quoteAccepted?'accepted':'pending'):null,quoteAccepted):
+          {...inquiry,status:'accepted',accepted_at:inquiry.created_at}};
       }
       else if(mode==='offline') {await route.abort('failed');return;}
       else if(path==='/providers') body={data:mode==='empty'?[]:[provider],meta:{...meta,total:mode==='empty'?0:1}};
@@ -236,6 +267,31 @@ const results=[];
     await page.getByLabel('Volver',{exact:true}).click();
     await visible('Mis solicitudes');
     results.push('Historial propio reabre el detalle; 503 de lectura admite reintento y 404 oculta los datos privados.');
+    quotePhase=true;
+    await page.getByRole('button',{name:/Solicitud #42: Soporte de computadoras/}).click();
+    await page.getByRole('button',{name:'Solicitar cotización',exact:true}).click();
+    await visible('No se pudo comprobar el resultado. Actualiza las cotizaciones antes de repetir la acción.');
+    assert.equal(issueKeys.length,1);
+    await page.getByRole('button',{name:'Reintentar la misma emisión',exact:true}).click();
+    await visible('Detalle de la cotización');
+    assert.equal(issueKeys.length,2);
+    assert.equal(issueKeys[0],issueKeys[1]);
+    assert.equal(acceptancePosts,0);
+    await page.getByRole('button',{name:'Revisar aceptación',exact:true}).click();
+    assert.equal(acceptancePosts,0);
+    await page.getByRole('button',{name:'Volver sin aceptar',exact:true}).click();
+    assert.equal(acceptancePosts,0);
+    await page.getByRole('button',{name:'Revisar aceptación',exact:true}).click();
+    await page.getByRole('button',{name:'Confirmar aceptación',exact:true}).click();
+    await visible('Cotización aceptada.');
+    await visible('Importe acordado');
+    await visible('Comisión Tekora 15 % incluida: MXN 150.00');
+    assert.equal(acceptancePosts,1);
+    assert.equal(await page.getByRole('button',{name:'Solicitar cotización',exact:true}).count(),0);
+    await page.getByLabel('Volver',{exact:true}).click();
+    await visible('Mis solicitudes');
+    results.push('Cotización mantiene UUID tras 503, exige consentimiento y presenta el total y la comisión del servidor.');
+
 
     await page.getByText('Mensajes',{exact:true}).click();
     await visible('Chat de demostración');

@@ -7,6 +7,7 @@ import { ApiError } from '@/api/http';
 import { inquiryLabels, inquiryPath, isInquiryResource, isJourneyResource, type ContractingJourney, type Inquiry } from '@/api/inquiries';
 import { resourceId, type Resource } from '@/api/types';
 import { ApiState } from '@/components/api-state';
+import { InquiryQuotes } from '@/components/inquiry-quotes';
 import { useApiResource } from '@/hooks/use-api-resource';
 
 const stepLabels = {
@@ -56,6 +57,7 @@ export default function SolicitudScreen() {
         </View>}
         <ApiState {...journey} />
         {journey.data && <JourneyDetails journey={journey.data.data} />}
+        {inquiry && <InquiryQuotes key={inquiry.id} inquiryId={inquiry.id} journey={journey.data?.data ?? null} refreshJourney={journey.retry} />}
       </>}
     </ScrollView>
   </SafeAreaView>;
@@ -68,7 +70,7 @@ function JourneyDetails({ journey }: { journey: ContractingJourney }) {
       <Text style={styles.heading}>Siguiente paso</Text>
       <Text style={styles.action}>{action.label}</Text>
       <Text style={styles.body}>{action.description}</Text>
-      {action.interaction === 'navigate' && action.code !== 'read_history' &&
+      {action.interaction === 'navigate' && !['read_history', 'issue_quote', 'review_quote'].includes(action.code) &&
         <Text style={styles.meta}>{action.mobile_execution_available ? 'Esta acción aún no está integrada en la app.' : 'Esta acción solo está disponible fuera de la app.'}</Text>}
     </View>
     <View style={styles.card}>
