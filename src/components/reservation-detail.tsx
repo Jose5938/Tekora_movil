@@ -8,7 +8,7 @@ import { inquiryPath, isJourneyResource, type ContractingJourney } from '@/api/i
 import { mxn } from '@/api/quotes';
 import { cancelReservation, isContextResource, isReservationResource, observedHoldSeconds,
   reservationLabels, type Reservation, type ReservationContext } from '@/api/reservations';
-import { finishReservationIntent, reservationIntent, reservationScope } from '@/api/reservation-intent';
+import { finishCommandIntent, commandIntent, reservationScope } from '@/api/command-intent';
 import type { Resource } from '@/api/types';
 import { useSession } from '@/auth/context';
 import { ApiState } from '@/components/api-state';
@@ -88,21 +88,21 @@ export function ReservationDetail({ id }: { id: number }) {
         }
       }
       if (!focused.current) return;
-      const key = reservation.commercial_protocol ? await reservationIntent(scope, { version: reservation.version }) : undefined;
+      const key = reservation.commercial_protocol ? await commandIntent(scope, { version: reservation.version }) : undefined;
       if (!focused.current) return;
       if (action === 'commit' && (!key || !active())) {
         throw new ApiError(409, 'conflict', 'Terminó el plazo de la retención. Actualiza el estado.');
       }
       const result = action === 'commit' ? await commitReservation(api, reservation, key!) :
         await cancelReservation(api, reservation, key);
-      await finishReservationIntent(scope);
+      await finishCommandIntent(scope);
       if (focused.current) {
         setNotice(action === 'cancel' ? 'Reserva cancelada.' :
           result.status === 'confirmed' ? 'Contratación confirmada por Tekora.' :
             `Estado informado por Tekora: ${reservationLabels[result.status]}.`);
       }
     } catch (error) {
-      if (error instanceof ApiError && [409, 422].includes(error.status)) await finishReservationIntent(scope);
+      if (error instanceof ApiError && [409, 422].includes(error.status)) await finishCommandIntent(scope);
       if (focused.current) {
         const uncertain = !(error instanceof ApiError) || error.status >= 500 ||
           ['network', 'invalid_response'].includes(error.code);

@@ -59,6 +59,7 @@ export type ContractingJourney = {
   commercial: JourneyCommercial & { can_propose: boolean };
   reservation: { id: number; version: number; actions: string[] } | null;
   confirmation_readiness?: unknown;
+  conversation: { can_send: boolean; unread_count: number };
   history: { inquiry: HistoryEvent[]; reservations: HistoryReservation[] };
 };
 
@@ -121,6 +122,8 @@ function isJourney(value: unknown): value is ContractingJourney {
     positiveId(provider.id) && typeof provider.display_name === 'string' && isProgress(value.progress) &&
     isAction(value.next_action) && isRecord(value.commercial) && typeof value.commercial.can_propose === 'boolean' &&
     isJourneyCommercial(value.commercial) && isHistory(value.history) &&
+    isRecord(value.conversation) && typeof value.conversation.can_send === 'boolean' &&
+    Number.isSafeInteger(value.conversation.unread_count) && Number(value.conversation.unread_count) >= 0 &&
     (value.reservation === null || (isRecord(value.reservation) && positiveId(value.reservation.id) &&
       positiveId(value.reservation.version) && Array.isArray(value.reservation.actions) &&
       value.reservation.actions.every(action => typeof action === 'string')));
