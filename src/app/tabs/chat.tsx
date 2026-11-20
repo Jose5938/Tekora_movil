@@ -44,8 +44,8 @@ export default function ChatScreen() {
         >
           <Ionicons name="calendar-outline" size={24} color="#005b9f" style={styles.bannerIcon} />
           <View style={styles.bannerInfo}>
-            <Text style={styles.bannerTitle}>Reservas en preparación</Text>
-            <Text style={styles.bannerDetails}>Ver vista previa, sin cita confirmada</Text>
+            <Text style={styles.bannerTitle}>Mis reservas</Text>
+            <Text style={styles.bannerDetails}>Consulta el estado de tus horarios</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#005b9f" />
         </TouchableOpacity>

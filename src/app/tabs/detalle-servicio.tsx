@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiState } from '@/components/api-state';
 import { InquiryForm } from '@/components/inquiry-form';
+import { isAvailabilityResource } from '@/api/reservations';
+import { ReservationButton, Schedule } from '@/components/reservation-ui';
 import { isServiceResource, modalityLabels, resourceId } from '@/api/types';
 
 export default function DetalleServicioScreen() {
@@ -14,6 +16,8 @@ export default function DetalleServicioScreen() {
   const serviceId = resourceId(id);
   const resource = useApiResource(serviceId ? `/services/${serviceId}` : null, isServiceResource);
   const service = resource.data?.data;
+  const [showAvailability, setShowAvailability] = useState(false);
+  const availability = useApiResource(serviceId && showAvailability ? `/services/${serviceId}/availability` : null, isAvailabilityResource);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -47,6 +51,12 @@ export default function DetalleServicioScreen() {
               <TouchableOpacity style={styles.contactButton} onPress={() => router.push({ pathname: '/tabs/perfil-experto', params: { id: service.provider.id } })}><Text style={styles.contactButtonText}>Ver perfil</Text></TouchableOpacity>
             </View>
           </View>
+          <ReservationButton label={showAvailability ? 'Ocultar horario publicado' : 'Consultar horario publicado'}
+            onPress={() => setShowAvailability(value => !value)} />
+          {showAvailability && <View style={styles.specsCard}>
+            <ApiState {...availability} />
+            {availability.data && <Schedule availability={availability.data.data} />}
+          </View>}
           <InquiryForm key={service.id} serviceId={service.id} />
         </>}
       </ScrollView>

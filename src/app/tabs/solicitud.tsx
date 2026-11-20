@@ -8,6 +8,7 @@ import { inquiryLabels, inquiryPath, isInquiryResource, isJourneyResource, type 
 import { resourceId, type Resource } from '@/api/types';
 import { ApiState } from '@/components/api-state';
 import { InquiryQuotes } from '@/components/inquiry-quotes';
+import { ReservationButton } from '@/components/reservation-ui';
 import { useApiResource } from '@/hooks/use-api-resource';
 
 const stepLabels = {
@@ -57,6 +58,12 @@ export default function SolicitudScreen() {
         </View>}
         <ApiState {...journey} />
         {journey.data && <JourneyDetails journey={journey.data.data} />}
+        {journey.data?.data.next_action.code === 'propose_schedule' &&
+          journey.data.data.next_action.mobile_execution_available && journey.data.data.commercial.can_propose &&
+          <ReservationButton label="Proponer horario" onPress={() => router.push({ pathname: '/tabs/reserva', params: { inquiry: inquiryId } })} />}
+        {journey.data?.data.reservation && <ReservationButton label="Ver reserva actual"
+          onPress={() => router.push({ pathname: '/tabs/reserva', params: { id: journey.data?.data.reservation?.id } })} />}
+        {inquiry && <ReservationButton label="Ver mis reservas" onPress={() => router.push('/tabs/reserva')} />}
         {inquiry && <InquiryQuotes key={inquiry.id} inquiryId={inquiry.id} journey={journey.data?.data ?? null} refreshJourney={journey.retry} />}
       </>}
     </ScrollView>
@@ -70,7 +77,7 @@ function JourneyDetails({ journey }: { journey: ContractingJourney }) {
       <Text style={styles.heading}>Siguiente paso</Text>
       <Text style={styles.action}>{action.label}</Text>
       <Text style={styles.body}>{action.description}</Text>
-      {action.interaction === 'navigate' && !['read_history', 'issue_quote', 'review_quote'].includes(action.code) &&
+      {action.interaction === 'navigate' && !['read_history', 'issue_quote', 'review_quote', 'propose_schedule'].includes(action.code) &&
         <Text style={styles.meta}>{action.mobile_execution_available ? 'Esta acción aún no está integrada en la app.' : 'Esta acción solo está disponible fuera de la app.'}</Text>}
     </View>
     <View style={styles.card}>

@@ -6,6 +6,7 @@ const { resolve, join, extname } = require('node:path');
 const assert = require('node:assert/strict');
 const { inquiry, journey, collection } = require('../tests/fixtures/inquiries.cjs');
 const { id: quoteId, getQuote, getQuoteJourney } = require('../tests/fixtures/quotes.cjs');
+const { availability, options, getReservation, getContext, getReservationJourney } = require('../tests/fixtures/reservations.cjs');
 const root = resolve(process.env.TEKORA_WEB_PREVIEW_DIR || 'work/10a-web-preview');
 const evidence = resolve(process.env.TEKORA_BROWSER_EVIDENCE_DIR || 'work/10a-browser-evidence');
 mkdirSync(evidence, { recursive: true });
@@ -26,6 +27,8 @@ let logins=0, logouts=0;
 let inquiryCreated=false, inquiryReadMode='normal', inquiryPosts=0;
 let quotePhase=false, quoteIssued=false, quoteAccepted=false, acceptancePosts=0;
 const issueKeys=[];
+let reservationStatus=null, proposals=0, cancellations=0;
+const proposalKeys=[];
 const requests=[];
 const results=[];
 (async () => {
@@ -87,6 +90,45 @@ const results=[];
         assert.ok(request.headers().authorization);
         body=inquiryCreated?collection:{...collection,data:[],meta:{...collection.meta,total:0}};
       }
+      else if(path==='/services/21/availability') {
+        assert.equal(request.headers().authorization,undefined);
+        body={data:availability};
+      }
+      else if(path==='/inquiries/42/reservation-options') {
+        assert.ok(request.headers().authorization);
+        body={data:options};
+      }
+      else if(path==='/inquiries/42/reservations') {
+        assert.ok(request.headers().authorization);
+        assert.equal(request.method(),'POST');
+        const { idempotency_key, ...proposal }=request.postDataJSON();
+        assert.deepEqual(proposal,{date:'2026-11-23',time:'10:00',availability_revision:11,quote_id:quoteId});
+        assert.match(idempotency_key,/^[0-9a-f-]{36}$/i);
+        proposalKeys.push(idempotency_key);
+        proposals++;
+        if(proposals===1) {
+          status=503;body=error('temporarily_unavailable','No se pudo verificar la propuesta.');
+        } else {
+          reservationStatus='requested';
+          status=201;body={data:getReservation()};
+        }
+      }
+      else if(path==='/reservations/17/cancel') {
+        assert.ok(request.headers().authorization);
+        assert.equal(request.method(),'PATCH');
+        const { idempotency_key, ...intent }=request.postDataJSON();
+        assert.match(idempotency_key,/^[0-9a-f-]{36}$/i);
+        assert.deepEqual(intent,{version:8});
+        cancellations++;
+        reservationStatus='cancelled';
+        body={data:getReservation(reservationStatus)};
+      }
+      else if(path==='/reservations/17' || path==='/reservations/17/checkout-context' || path==='/reservations') {
+        assert.ok(request.headers().authorization);
+        if(path==='/reservations') body={data:reservationStatus?[getReservation(reservationStatus)]:[],
+          meta:{...collection.meta,total:reservationStatus?1:0}};
+        else body={data:path.endsWith('/checkout-context')?getContext(reservationStatus):getReservation(reservationStatus)};
+      }
       else if(path==='/inquiries/42/quotes') {
         assert.ok(request.headers().authorization);
         if(request.method()==='POST') {
@@ -119,7 +161,7 @@ const results=[];
           status=503;body=error('temporarily_unavailable','No se puede consultar el seguimiento.');
         } else if (!quotePhase) body={data:path.endsWith('/journey')?journey:inquiry};
         else body={data:path.endsWith('/journey')?
-          getQuoteJourney(quoteIssued?getQuote(quoteAccepted?'accepted':'pending'):null,quoteAccepted):
+          (reservationStatus?getReservationJourney(reservationStatus):getQuoteJourney(quoteIssued?getQuote(quoteAccepted?'accepted':'pending'):null,quoteAccepted)):
           {...inquiry,status:'accepted',accepted_at:inquiry.created_at}};
       }
       else if(mode==='offline') {await route.abort('failed');return;}
@@ -184,6 +226,10 @@ const results=[];
     await visible('Detalle del servicio');
     await visible('Diagnóstico remoto.');
     assert.ok(requests.some(r=>r.path==='/services/21'));
+    await page.getByRole('button',{name:'Consultar horario publicado',exact:true}).click();
+    await visible('Zona horaria: America/Mexico_City');
+    await visible('Lunes: 09:00–17:00');
+    await page.getByRole('button',{name:'Ocultar horario publicado',exact:true}).click();
     await page.screenshot({path:join(evidence,'detalle-servicio.png'),fullPage:true});
     results.push('Catálogo y detalle usan IDs reales /services/21 y muestran solo campos respaldados.');
     mode='missing';
@@ -288,24 +334,45 @@ const results=[];
     await visible('Comisión Tekora 15 % incluida: MXN 150.00');
     assert.equal(acceptancePosts,1);
     assert.equal(await page.getByRole('button',{name:'Solicitar cotización',exact:true}).count(),0);
-    await page.getByLabel('Volver',{exact:true}).click();
-    await visible('Mis solicitudes');
     results.push('Cotización mantiene UUID tras 503, exige consentimiento y presenta el total y la comisión del servidor.');
 
+
+    await page.getByRole('button',{name:'Proponer horario',exact:true}).click();
+    await visible('Zona horaria: America/Mexico_City');
+    await page.getByLabel('Fecha de la propuesta',{exact:true}).fill('2026-11-23');
+    await page.getByLabel('Hora de la propuesta',{exact:true}).fill('10:00');
+    await page.getByRole('radio',{name:/1,000.00/}).click();
+    await page.getByRole('button',{name:'Enviar propuesta',exact:true}).click();
+    await visible('No se pudo verificar la propuesta.');
+    assert.equal(proposals,1);
+    await page.getByRole('button',{name:'Reintentar la misma propuesta',exact:true}).click();
+    await visible('Espera de aceptación');
+    assert.equal(proposals,2);
+    assert.equal(proposalKeys[0],proposalKeys[1]);
+    reservationStatus='held';
+    await page.getByRole('button',{name:'Actualizar reserva',exact:true}).click();
+    await visible('Retención activa');
+    await visible('Versión de reserva: 8');
+    await visible('El plazo original es de 900 segundos. Volver a consultar no lo amplía.');
+    assert.equal(await page.getByRole('button',{name:'Confirmar contratación',exact:true}).count(),0);
+    await page.getByRole('button',{name:'Cancelar reserva',exact:true}).click();
+    assert.equal(cancellations,0);
+    await page.getByRole('button',{name:'Confirmar cancelación',exact:true}).click();
+    await visible('Reserva cancelada');
+    assert.equal(cancellations,1);
+    await page.getByLabel('Volver',{exact:true}).click();
+    await page.getByLabel('Volver',{exact:true}).click();
+    await visible('Mis solicitudes');
+    results.push('Horario publicado, propuesta con UUID estable tras 503, retención y cancelación con la versión de reserva.');
 
     await page.getByText('Mensajes',{exact:true}).click();
     await visible('Chat de demostración');
     assert.equal(await page.getByLabel('Envío en preparación',{exact:true}).isEnabled(),false);
-    await page.getByText('Reservas en preparación',{exact:true}).click();
-    await visible('RESERVAS EN PREPARACIÓN');
-    assert.equal(await page.getByText('Chat en preparación',{exact:true}).isEnabled(),false);
-    await page.getByText('Ver vista previa de pagos',{exact:true}).click();
-    await visible('Sin reserva ni importe de pago');
-    assert.equal(await page.getByText('Pagos en preparación',{exact:true}).isEnabled(),false);
-    await page.screenshot({path:join(evidence,'pagos-en-preparacion.png'),fullPage:true});
-    await page.getByText('Cancelar y volver a Tekora',{exact:true}).click();
-    await visible('RESERVAS EN PREPARACIÓN');
-    await page.goBack();
+    await page.getByText('Mis reservas',{exact:true}).click();
+    await visible('Historial de reservas');
+    await visible('Reserva cancelada');
+    assert.equal(await page.getByText('Ver vista previa de pagos',{exact:true}).count(),0);
+    await page.getByLabel('Volver',{exact:true}).click();
     await visible('Chat de demostración');
     await page.getByText('Mi cuenta',{exact:true}).click();
     await visible('cliente@example.test');
@@ -314,7 +381,7 @@ const results=[];
     await visible('Te damos la bienvenida a Tekora');
     assert.equal(logouts,1);
     assert.ok(requests.filter(r=>r.path==='/auth/logout').every(r=>r.hasBearer));
-    results.push('Chat/reserva/pago bloquean operaciones; cuenta usa identidad real; logout envía POST Bearer.');
+    results.push('Historial de reservas y chat sin envíos simulados; cuenta usa identidad real; logout envía POST Bearer.');
     await signIn('short-session');
     await visible('Expertos publicados');
     await visible('Te damos la bienvenida a Tekora');

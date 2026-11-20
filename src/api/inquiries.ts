@@ -56,7 +56,8 @@ export type ContractingJourney = {
   participants: { provider: { id: number; display_name: string } };
   progress: { current_stage: Stage; steps: { code: Stage; label: string; status: StepState }[]; closed: boolean };
   next_action: JourneyAction;
-  commercial: JourneyCommercial;
+  commercial: JourneyCommercial & { can_propose: boolean };
+  reservation: { id: number; version: number; actions: string[] } | null;
   history: { inquiry: HistoryEvent[]; reservations: HistoryReservation[] };
 };
 
@@ -117,7 +118,11 @@ function isJourney(value: unknown): value is ContractingJourney {
   const { provider } = value.participants;
   return value.viewer_role === 'client' && typeof value.inquiry.label === 'string' && isInquirySummary(value.inquiry) &&
     positiveId(provider.id) && typeof provider.display_name === 'string' && isProgress(value.progress) &&
-    isAction(value.next_action) && isJourneyCommercial(value.commercial) && isHistory(value.history);
+    isAction(value.next_action) && isRecord(value.commercial) && typeof value.commercial.can_propose === 'boolean' &&
+    isJourneyCommercial(value.commercial) && isHistory(value.history) &&
+    (value.reservation === null || (isRecord(value.reservation) && positiveId(value.reservation.id) &&
+      positiveId(value.reservation.version) && Array.isArray(value.reservation.actions) &&
+      value.reservation.actions.every(action => typeof action === 'string')));
 }
 
 export function isInquiryCollection(value: unknown): value is Collection<Inquiry> {
