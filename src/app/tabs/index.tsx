@@ -1,8 +1,9 @@
+import { isUnreadCount } from '@/api/communications';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // 1. Importamos el router
+import { useFocusEffect, useRouter } from 'expo-router'; // 1. Importamos el router
 import NavegacionPersonalizada from '@/components/navegacion-personalizada';
 import { useSession } from '@/auth/context';
 import { useApiResource } from '@/hooks/use-api-resource';
@@ -17,6 +18,9 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const notices = useApiResource('/notifications/unread-count', isUnreadCount, true);
+  useFocusEffect(notices.retry);
+  const unread = notices.data?.data.unread_count;
   const providers = useApiResource(`/providers?page=${page}&q=${encodeURIComponent(search)}`, isProviderCollection);
   const cerrarSesion = async () => {
     if (closing) return;
@@ -44,8 +48,11 @@ export default function HomeScreen() {
           
           {/* Contenedor derecho para los iconos */}
           <View style={styles.headerRightIcons}>
-            <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Notificaciones en preparación" style={[styles.bellButton, { opacity: 0.5 }]}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Notificaciones"
+              accessibilityHint={unread === undefined ? undefined : `${unread} sin leer`} style={styles.bellButton}
+              onPress={() => router.push('/tabs/notificaciones')}>
               <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
+              {!!unread && <Text style={styles.noticeBadge}>{unread > 99 ? '99+' : unread}</Text>}
             </TouchableOpacity>
             
             {/* Botón de Cerrar Sesión */}
@@ -144,6 +151,8 @@ const ExpertCard = ({ provider, onPress }: { provider: Provider, onPress: () => 
   </TouchableOpacity>
 );
 const styles = StyleSheet.create({
+  noticeBadge: { position: 'absolute', right: -4, top: -4, backgroundColor: '#005b9f', color: '#fff',
+    paddingHorizontal: 4, borderRadius: 8, textAlign: 'center', fontSize: 10, fontWeight: 'bold' },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, backgroundColor: '#fff' },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100 },

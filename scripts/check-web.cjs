@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const { inquiry, journey, collection } = require('../tests/fixtures/inquiries.cjs');
 const { id: quoteId, getQuote, getQuoteJourney } = require('../tests/fixtures/quotes.cjs');
 const { availability, options, getReservation, getContext, getReservationJourney } = require('../tests/fixtures/reservations.cjs');
+const { instant, conversation, notification, cursor, readToken, ownMessage, messagePage } = require('../tests/fixtures/communications.cjs');
 const root = resolve(process.env.TEKORA_WEB_PREVIEW_DIR || 'work/10a-web-preview');
 const evidence = resolve(process.env.TEKORA_BROWSER_EVIDENCE_DIR || 'work/10a-browser-evidence');
 mkdirSync(evidence, { recursive: true });
@@ -30,6 +31,8 @@ const issueKeys=[];
 let reservationStatus=null, proposals=0, cancellations=0, readinessState='web_checkout_required';
 const commitKeys=[];
 const proposalKeys=[];
+let messagesRead=false, messageSent=false, noticeRead=false;
+const messageKeys=[];
 const requests=[];
 const results=[];
 (async () => {
@@ -90,6 +93,40 @@ const results=[];
       else if(path==='/inquiries') {
         assert.ok(request.headers().authorization);
         body=inquiryCreated?collection:{...collection,data:[],meta:{...collection.meta,total:0}};
+      }
+      else if(path==='/conversations') {
+        assert.ok(request.headers().authorization);
+        body={data:[{...conversation,unread_messages_count:messagesRead?0:1}],meta:collection.meta};
+      }
+      else if(path==='/inquiries/42/messages/read') {
+        assert.ok(request.headers().authorization);
+        assert.deepEqual(request.postDataJSON(),{read_token:readToken});
+        messagesRead=true;
+        body={data:{inquiry_id:42,last_read_message_id:3}};
+      }
+      else if(path==='/inquiries/42/messages') {
+        assert.ok(request.headers().authorization);
+        if(request.method()==='POST') {
+          const { idempotency_key, ...input }=request.postDataJSON();
+          assert.deepEqual(input,{body:ownMessage.body});
+          assert.match(idempotency_key,/^[0-9a-f-]{36}$/i);
+          messageKeys.push(idempotency_key);
+          if(messageKeys.length===1) {status=503;body=error('temporarily_unavailable','No se pudo verificar el envío.');}
+          else {status=201;messageSent=true;body={data:ownMessage};}
+        } else {
+          const currentCursor=new URL(request.url()).searchParams.get('messages_cursor');
+          assert.ok(currentCursor===null || currentCursor===cursor || currentCursor==='newer-fixture');
+          body=messagePage(messagesRead,messageSent,currentCursor===cursor);
+        }
+      }
+      else if(path==='/notifications' || path==='/notifications/unread-count' || path==='/notifications/inquiry/42/read') {
+        assert.ok(request.headers().authorization);
+        if(path.endsWith('/read')) {
+          assert.deepEqual(request.postDataJSON(),{});
+          noticeRead=true;
+          body={data:{...notification,read_at:instant}};
+        } else if(path.endsWith('/unread-count')) body={data:{unread_count:noticeRead?0:1}};
+        else body={data:[{...notification,read_at:noticeRead?instant:null}],meta:collection.meta};
       }
       else if(path==='/services/21/availability') {
         assert.equal(request.headers().authorization,undefined);
@@ -397,22 +434,55 @@ const results=[];
     results.push('Horario publicado, propuesta con UUID estable tras 503, retención y cancelación con la versión de reserva.');
 
     await page.getByText('Mensajes',{exact:true}).click();
-    await visible('Chat de demostración');
-    assert.equal(await page.getByLabel('Envío en preparación',{exact:true}).isEnabled(),false);
-    await page.getByText('Mis reservas',{exact:true}).click();
+    await visible('Actualizar conversaciones');
+    assert.equal(messagesRead,false);
+    await page.getByRole('button',{name:/Soporte de computadoras.*Solicitud #42/}).click();
+    await visible('Mensaje recibido de prueba.');
+    await page.getByRole('button',{name:'Mensajes anteriores',exact:true}).click();
+    await visible('Mensaje anterior de prueba.');
+    await page.getByRole('button',{name:'Mensajes más recientes',exact:true}).click();
+    await visible('Mensaje recibido de prueba.');
+    assert.equal(messagesRead,false);
+    await page.getByRole('button',{name:'Marcar página como leída',exact:true}).click();
+    await page.getByRole('button',{name:'Marcar página como leída',exact:true}).waitFor({state:'hidden'});
+    assert.equal(messagesRead,true);
+    await page.getByLabel('Mensaje',{exact:true}).fill(ownMessage.body);
+    await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
+    await visible('No se pudo verificar el envío.');
+    assert.equal(messageKeys.length,1);
+    await page.getByRole('button',{name:'Reintentar el mismo mensaje',exact:true}).click();
+    await visible(ownMessage.body);
+    assert.equal(messageKeys[0],messageKeys[1]);
+    await page.getByLabel('Volver a conversaciones',{exact:true}).click();
+    await visible('Actualizar conversaciones');
+    await page.getByRole('button',{name:'Mis reservas',exact:true}).click();
     await visible('Historial de reservas');
     await visible('Reserva cancelada');
     assert.equal(await page.getByText('Ver vista previa de pagos',{exact:true}).count(),0);
     await page.getByLabel('Volver',{exact:true}).click();
-    await visible('Chat de demostración');
+    await visible('Actualizar conversaciones');
+    results.push('Conversación usa cursor y marcado explícito, y repite un mensaje con el mismo UUID tras 503.');
+    await page.getByText('Inicio',{exact:true}).click();
+    await page.getByRole('button',{name:'Notificaciones',exact:true}).click();
+    await visible('Notificaciones sin leer: 1');
+    await visible(notification.label);
+    assert.equal(noticeRead,false);
+    await page.getByRole('button',{name:'Marcar aviso como leído',exact:true}).click();
+    await visible('Notificaciones sin leer: 0');
+    await page.getByRole('button',{name:'Ver detalle del aviso',exact:true}).click();
+    await visible('Solicitud #42 · Aceptada');
+    await page.getByLabel('Volver',{exact:true}).click();
+    await visible('Notificaciones sin leer: 0');
+    await page.getByLabel('Volver',{exact:true}).click();
     await page.getByText('Mi cuenta',{exact:true}).click();
+    results.push('Notificaciones: contador real, marcado por identificador compuesto y navegación al recurso propio.');
     await visible('cliente@example.test');
     await page.screenshot({path:join(evidence,'cuenta.png'),fullPage:true});
     await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
     await visible('Te damos la bienvenida a Tekora');
     assert.equal(logouts,1);
     assert.ok(requests.filter(r=>r.path==='/auth/logout').every(r=>r.hasBearer));
-    results.push('Historial de reservas y chat sin envíos simulados; cuenta usa identidad real; logout envía POST Bearer.');
+    results.push('Cuenta usa identidad real; logout envía POST Bearer.');
     await signIn('short-session');
     await visible('Expertos publicados');
     await visible('Te damos la bienvenida a Tekora');

@@ -42,7 +42,7 @@ export default function PerfilExpertoScreen() {
               <Text style={styles.primaryButtonText}>Solicitar servicio</Text>
               <Text style={styles.primaryButtonSub}>Desde el catálogo</Text>
             </TouchableOpacity>
-            <TouchableOpacity accessibilityLabel="Ver chat en preparación" style={styles.secondaryButton} onPress={() => router.push('/tabs/chat')}>
+            <TouchableOpacity accessibilityLabel="Ver conversaciones" style={styles.secondaryButton} onPress={() => router.push('/tabs/chat')}>
               <Ionicons name="chatbubble-ellipses-outline" size={24} color="#005b9f" />
             </TouchableOpacity>
           </View>

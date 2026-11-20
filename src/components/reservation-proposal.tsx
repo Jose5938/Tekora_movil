@@ -5,7 +5,7 @@ import { api } from '@/api/client';
 import { ApiError, errorMessage } from '@/api/http';
 import { mxn } from '@/api/quotes';
 import { civilDate, civilTime, isOptionsResource, proposeReservation, type ReservationOptions } from '@/api/reservations';
-import { finishReservationIntent, reservationIntent, reservationScope } from '@/api/reservation-intent';
+import { finishCommandIntent, commandIntent, reservationScope } from '@/api/command-intent';
 import type { Resource } from '@/api/types';
 import { ApiState } from '@/components/api-state';
 import { ReservationButton, Schedule, reservationStyles as styles } from '@/components/reservation-ui';
@@ -48,15 +48,15 @@ export function ReservationProposal({ inquiryId }: { inquiryId: number }) {
     setBusy(true);
     setNotice(undefined);
     try {
-      const key = await reservationIntent(scope, proposal);
+      const key = await commandIntent(scope, proposal);
       if (!focused.current) return;
       const result = await proposeReservation(api, inquiryId, proposal, key);
-      await finishReservationIntent(scope);
+      await finishCommandIntent(scope);
       if (focused.current) router.replace({ pathname: '/tabs/reserva', params: { id: result.id } });
     } catch (error) {
       if (!focused.current) return;
       if (error instanceof ApiError && [409, 422].includes(error.status)) {
-        await finishReservationIntent(scope);
+        await finishCommandIntent(scope);
         setUncertain(false);
         query.retry();
       } else if (!(error instanceof ApiError) || error.status >= 500 || ['network', 'invalid_response', 'intent_pending'].includes(error.code)) {

@@ -64,6 +64,8 @@ export default function SolicitudScreen() {
           <ReservationButton label="Proponer horario" onPress={() => router.push({ pathname: '/tabs/reserva', params: { inquiry: inquiryId } })} />}
         {journey.data?.data.reservation && <ReservationButton label="Ver reserva actual"
           onPress={() => router.push({ pathname: '/tabs/reserva', params: { id: journey.data?.data.reservation?.id } })} />}
+        {journey.data && <ReservationButton label="Abrir conversación"
+          onPress={() => router.push({ pathname: '/tabs/chat', params: { inquiry: inquiryId } })} />}
         {inquiry && <ReservationButton label="Ver mis reservas" onPress={() => router.push('/tabs/reserva')} />}
         {inquiry && <InquiryQuotes key={inquiry.id} inquiryId={inquiry.id} journey={journey.data?.data ?? null} refreshJourney={journey.retry} />}
       </>}
