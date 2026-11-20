@@ -11,22 +11,22 @@ export default function NavegacionPersonalizada() {
 
   return (
     <View style={[styles.navegacion, { paddingBottom: insets.bottom > 0 ? insets.bottom + 6 : 12 }]}>
-       <TouchableOpacity style={styles.navItem} onPress={() => router.push('/tabs')}>
+       <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs')}>
         <Ionicons name="home-outline" size={24} color={pathname === '/tabs' ? '#005b9f' : '#666'} />
         <Text style={[styles.navText, pathname === '/tabs' && styles.navTextActive]}>Inicio</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/tabs/servicios')}>
-        <Ionicons name="document-text-outline" size={24} color={pathname === '/servicios' ? '#005b9f' : '#666'} />
-        <Text style={[styles.navText, pathname === '/servicios' && styles.navTextActive]}>Servicios</Text>
+      <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs/servicios')}>
+        <Ionicons name="document-text-outline" size={24} color={pathname === '/tabs/servicios' ? '#005b9f' : '#666'} />
+        <Text style={[styles.navText, pathname === '/tabs/servicios' && styles.navTextActive]}>Servicios</Text>
       </TouchableOpacity>
 
-     <TouchableOpacity style={styles.navItem} onPress={() => router.push('/tabs/chat')}>
-        <Ionicons name="chatbubble-outline" size={24} color={pathname === '/chat' ? '#005b9f' : '#666'} />
-        <Text style={[styles.navText, pathname === '/chat' && styles.navTextActive]}>Mensajes</Text>
+     <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs/chat')}>
+        <Ionicons name="chatbubble-outline" size={24} color={pathname === '/tabs/chat' ? '#005b9f' : '#666'} />
+        <Text style={[styles.navText, pathname === '/tabs/chat' && styles.navTextActive]}>Mensajes</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/tabs/cuenta')}>
+      <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs/cuenta')}>
         <Ionicons name="person-outline" size={24} color={pathname.includes('cuenta') ? '#005b9f' : '#666'} />
         <Text style={[styles.navText, pathname.includes('cuenta') && styles.navTextActive]}>Mi cuenta</Text>
       </TouchableOpacity>

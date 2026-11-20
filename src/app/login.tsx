@@ -1,16 +1,38 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useSession } from '@/auth/context';
+import { ApiError, errorMessage, type FieldErrors } from '@/api/http';
 
 export default function LoginScreen() {
-  const router = useRouter();
+  const { login, message } = useSession();
   const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<FieldErrors>({});
+  const submitting = useRef(false);
 
-  // Función temporal que simula el inicio de sesión y te manda al index (tabs)
-  const iniciarSesion = () => {
-    router.replace('/tabs');
+  const iniciarSesion = async () => {
+    if (submitting.current) return;
+    const validation: FieldErrors = {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || email.trim().length > 255) validation.email = ['Ingresa un correo electrónico válido.'];
+    if (!password || password.length > 1024) validation.password = ['Ingresa tu contraseña (máximo 1024 caracteres).'];
+    setFields(validation);
+    setError(null);
+    if (Object.keys(validation).length) return;
+    submitting.current = true;
+    setLoading(true);
+    try { await login(email, password); } catch (failure) {
+      setError(errorMessage(failure));
+      if (failure instanceof ApiError) setFields(failure.fields);
+    } finally {
+      setPassword('');
+      submitting.current = false;
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,6 +54,8 @@ export default function LoginScreen() {
 
           {/* Formulario Tradicional */}
           <View style={styles.formContainer}>
+            {!!message && <Text style={styles.notice} accessibilityLiveRegion="polite">{message}</Text>}
+            {!!error && <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text>}
             <Text style={styles.inputLabel}>Correo electrónico</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="mail-outline" size={20} color="#888" style={styles.inputIcon} />
@@ -41,8 +65,16 @@ export default function LoginScreen() {
                 placeholderTextColor="#aaa"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                accessibilityLabel="Correo electrónico"
+                value={email}
+                onChangeText={setEmail}
+                editable={!loading}
+                maxLength={255}
               />
             </View>
+            {!!fields.email && <Text style={styles.error}>{fields.email.join(' ')}</Text>}
 
             <Text style={styles.inputLabel}>Contraseña</Text>
             <View style={styles.inputWrapper}>
@@ -52,18 +84,29 @@ export default function LoginScreen() {
                 placeholder="Ingresa tu contraseña"
                 placeholderTextColor="#aaa"
                 secureTextEntry={!mostrarPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="current-password"
+                accessibilityLabel="Contraseña"
+                value={password}
+                onChangeText={setPassword}
+                editable={!loading}
+                maxLength={1024}
+                onSubmitEditing={() => { void iniciarSesion(); }}
               />
-              <TouchableOpacity onPress={() => setMostrarPassword(!mostrarPassword)} style={styles.eyeIcon}>
+              <TouchableOpacity accessibilityLabel={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} onPress={() => setMostrarPassword(!mostrarPassword)} style={styles.eyeIcon}>
                 <Ionicons name={mostrarPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#888" />
               </TouchableOpacity>
             </View>
+            {!!fields.password && <Text style={styles.error}>{fields.password.join(' ')}</Text>}
+            {!!fields.device_name && <Text style={styles.error}>{fields.device_name.join(' ')}</Text>}
 
-            <TouchableOpacity style={styles.forgotPassword}>
+            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.forgotPassword, styles.disabled]}>
               <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={iniciarSesion}>
-              <Text style={styles.primaryButtonText}>Iniciar sesión</Text>
+            <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: loading, busy: loading }} disabled={loading} style={[styles.primaryButton, loading && styles.disabled]} onPress={() => { void iniciarSesion(); }}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Iniciar sesión</Text>}
             </TouchableOpacity>
           </View>
 
@@ -76,12 +119,12 @@ export default function LoginScreen() {
 
           {/* Botones Sociales */}
           <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton} onPress={iniciarSesion}>
+            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.socialButton, styles.disabled]}>
               <Ionicons name="logo-google" size={24} color="#DB4437" />
               <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.socialButton} onPress={iniciarSesion}>
+            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.socialButton, styles.disabled]}>
               <Ionicons name="logo-apple" size={24} color="#000" />
               <Text style={styles.socialButtonText}>Apple</Text>
             </TouchableOpacity>
@@ -90,10 +133,12 @@ export default function LoginScreen() {
           {/* Registro */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>¿No tienes una cuenta? </Text>
-            <TouchableOpacity onPress={iniciarSesion}>
+            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={styles.disabled}>
               <Text style={styles.footerLink}>Regístrate</Text>
             </TouchableOpacity>
           </View>
+          <Text style={styles.notice}>Google, Apple, registro y recuperación de contraseña están en preparación. Usa una cuenta de solicitante existente.</Text>
+          {Platform.OS === 'web' && <Text style={styles.notice}>Vista web: la sesión se conserva solo mientras esta página permanezca abierta.</Text>}
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -102,6 +147,9 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  error: { color: '#b3261e', fontSize: 13, marginBottom: 12 },
+  notice: { color: '#555', fontSize: 13, lineHeight: 20, marginVertical: 12, textAlign: 'center' },
+  disabled: { opacity: 0.5 },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   keyboardContainer: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40, flexGrow: 1, justifyContent: 'center' },

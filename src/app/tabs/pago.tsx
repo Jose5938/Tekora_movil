@@ -1,69 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { PreparationNotice } from '@/components/preparation-notice';
 
 export default function PagoPayPalScreen() {
   const router = useRouter();
-  // Estados: 'inicio' -> 'procesando' -> 'aprobado'
-  const [estadoPago, setEstadoPago] = useState<'inicio' | 'procesando' | 'aprobado'>('inicio');
-  
-  // Valor para la animación de escala (tamaño)
-  const escalaAnimacion = useRef(new Animated.Value(0)).current;
-
-  // Efecto que dispara la animación cuando el estado cambia a 'aprobado'
-  useEffect(() => {
-    if (estadoPago === 'aprobado') {
-      Animated.spring(escalaAnimacion, {
-        toValue: 1,
-        friction: 4,
-        tension: 50,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [estadoPago]);
-
-  const procesarPago = () => {
-    setEstadoPago('procesando');
-    
-    // 1. Simula 2 segundos de carga (ruedita girando)
-    setTimeout(() => {
-      setEstadoPago('aprobado');
-      
-      // 2. Muestra el éxito animado por 1.5 segundos y luego te manda al inicio
-      setTimeout(() => {
-        router.replace('/tabs');
-      }, 1500);
-    }, 2000);
-  };
-
-  // Si está procesando o aprobado, mostramos la pantalla de carga/éxito a pantalla completa
-  if (estadoPago !== 'inicio') {
-    return (
-      <SafeAreaView style={styles.loadingScreen}>
-        {estadoPago === 'procesando' ? (
-          <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#005b9f" style={{ transform: [{ scale: 1.5 }] }} />
-            <Text style={styles.loadingTitle}>Procesando pago...</Text>
-            <Text style={styles.loadingSub}>Conectando con PayPal de forma segura</Text>
-          </View>
-        ) : (
-          <View style={styles.centerContent}>
-            <Animated.View style={{ transform: [{ scale: escalaAnimacion }] }}>
-              <View style={styles.successIconCircle}>
-                <Ionicons name="checkmark" size={60} color="#fff" />
-              </View>
-            </Animated.View>
-            <Text style={styles.successTitle}>¡Pago Autorizado!</Text>
-            <Text style={styles.successSub}>Tu reserva RP-1248 está confirmada.</Text>
-          </View>
-        )}
-      </SafeAreaView>
-    );
-  }
-
-  // Interfaz de PayPal (Estado 'inicio')
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -77,23 +20,24 @@ export default function PagoPayPalScreen() {
       </View>
 
       <View style={styles.container}>
+        <PreparationNotice>Los pagos están en preparación. Esta vista no conecta con PayPal, no realiza cobros y no confirma reservas.</PreparationNotice>
         <View style={styles.summaryContainer}>
           <Text style={styles.merchantName}>Tekora MX</Text>
-          <Text style={styles.amount}>$350.00 <Text style={styles.currency}>MXN</Text></Text>
-          <Text style={styles.description}>Reserva de servicio RP-1248</Text>
+          <Text style={styles.amount}>— <Text style={styles.currency}>MXN</Text></Text>
+          <Text style={styles.description}>Sin reserva ni importe de pago</Text>
         </View>
 
         <View style={styles.accountCard}>
           <View style={styles.accountHeader}>
-            <Text style={styles.accountTitle}>Pagar con</Text>
+            <Text style={styles.accountTitle}>Método de pago en preparación</Text>
           </View>
           <View style={styles.paymentMethod}>
             <View style={styles.cardIcon}>
               <Ionicons name="card" size={20} color="#003087" />
             </View>
             <View style={styles.cardDetails}>
-              <Text style={styles.cardName}>Visa terminada en •••• 4567</Text>
-              <Text style={styles.cardUser}>ana.garcia@ejemplo.com</Text>
+              <Text style={styles.cardName}>Sin método de pago asociado</Text>
+              <Text style={styles.cardUser}>Sin cuenta de PayPal conectada</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </View>
@@ -102,14 +46,14 @@ export default function PagoPayPalScreen() {
         <View style={styles.protectionNote}>
           <Ionicons name="shield-checkmark" size={16} color="#0079C1" />
           <Text style={styles.protectionText}>
-            Estás cubierto por la <Text style={styles.protectionBold}>Protección al Comprador de PayPal</Text>.
+            La integración de pagos <Text style={styles.protectionBold}>aún no está disponible</Text>.
           </Text>
         </View>
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.payButton} onPress={procesarPago}>
-          <Text style={styles.payButtonText}>Pagar ahora</Text>
+        <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.payButton, { opacity: 0.5 }]}>
+          <Text style={styles.payButtonText}>Pagos en preparación</Text>
         </TouchableOpacity>
         <Text style={styles.cancelText} onPress={() => router.back()}>
           Cancelar y volver a Tekora

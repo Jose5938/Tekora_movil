@@ -1,17 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import NavegacionPersonalizada from './navegador';
+import NavegacionPersonalizada from '@/components/navegacion-personalizada';
+import { useSession } from '@/auth/context';
+import { PreparationNotice } from '@/components/preparation-notice';
 
 export default function MiCuentaScreen() {
+  const { user, logout } = useSession();
+  const [closing, setClosing] = useState(false);
+  const cerrarSesion = async () => {
+    if (closing) return;
+    setClosing(true);
+    try { await logout(); } finally { setClosing(false); }
+  };
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       
       {/* Cabecera */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mi Perfil</Text>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Configuración en preparación" style={[styles.iconButton, { opacity: 0.5 }]}>
           <Ionicons name="settings-outline" size={24} color="#1a1a1a" />
         </TouchableOpacity>
       </View>
@@ -22,24 +31,26 @@ export default function MiCuentaScreen() {
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
             <Ionicons name="person" size={40} color="#ccc" />
-            <TouchableOpacity style={styles.editAvatarButton}>
+            <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Cambiar foto en preparación" style={styles.editAvatarButton}>
               <Ionicons name="camera" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
           
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>Ana García</Text>
+            <Text style={styles.userName}>{user?.name}</Text>
+            <Text style={styles.userEmail}>{user?.email}</Text>
             {/* Insignia de seguridad en lugar de correo/teléfono */}
             <View style={styles.userBadge}>
-               <Ionicons name="shield-checkmark" size={14} color="#005b9f" />
-               <Text style={styles.userBadgeText}>Cuenta verificada</Text>
+               <Ionicons name="person-outline" size={14} color="#005b9f" />
+               <Text style={styles.userBadgeText}>Cuenta solicitante</Text>
             </View>
           </View>
           
-          <TouchableOpacity style={styles.editProfileButton}>
+          <TouchableOpacity accessibilityRole="button" disabled accessibilityLabel="Editar perfil en preparación" style={[styles.editProfileButton, { opacity: 0.5 }]}>
             <Ionicons name="pencil" size={18} color="#005b9f" />
           </TouchableOpacity>
         </View>
+        <PreparationNotice>Las opciones de actividad, edición, configuración y soporte aún no están disponibles desde la app.</PreparationNotice>
 
         {/* Sección: Mi Actividad */}
         <Text style={styles.sectionTitle}>Mi actividad</Text>
@@ -65,9 +76,9 @@ export default function MiCuentaScreen() {
         </View>
 
         {/* Botón de Cerrar Sesión */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar sesión" disabled={closing} style={styles.logoutButton} onPress={() => { void cerrarSesion(); }}>
           <Ionicons name="log-out-outline" size={20} color="#d9534f" />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
+          <Text style={styles.logoutText}>{closing ? 'Cerrando sesión…' : 'Cerrar sesión'}</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -77,8 +88,8 @@ export default function MiCuentaScreen() {
   );
 }
 
-const MenuItem = ({ icon, label }: { icon: any, label: string }) => (
-  <TouchableOpacity style={styles.menuItem}>
+const MenuItem = ({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>['name'], label: string }) => (
+  <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.menuItem, { opacity: 0.5 }]}>
     <View style={styles.menuIconContainer}>
       <Ionicons name={icon} size={22} color="#005b9f" />
     </View>
@@ -88,6 +99,7 @@ const MenuItem = ({ icon, label }: { icon: any, label: string }) => (
 );
 
 const styles = StyleSheet.create({
+  userEmail: { color: '#555', fontSize: 13, marginBottom: 8 },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#fff' },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a' },

@@ -1,0 +1,50 @@
+[
+  {
+    "node": "v22.13.0",
+    "scenario": "passing",
+    "exitCode": 0,
+    "temporaryBuildRemoved": true
+  },
+  {
+    "node": "v22.13.0",
+    "scenario": "failing",
+    "exitCode": 1,
+    "temporaryBuildRemoved": true
+  },
+  {
+    "node": "v22.13.0",
+    "scenario": "compile-error",
+    "exitCode": 1,
+    "temporaryBuildRemoved": true
+  },
+  {
+    "node": "v22.13.0",
+    "scenario": "no-tests",
+    "exitCode": 1,
+    "temporaryBuildRemoved": true
+  },
+  {
+    "node": "v24.22.1",
+    "scenario": "passing",
+    "exitCode": 0,
+    "temporaryBuildRemoved": true
+  },
+  {
+    "node": "v24.22.1",
+    "scenario": "failing",
+    "exitCode": 1,
+    "temporaryBuildRemoved": true
+  },
+  {
+    "node": "v24.22.1",
+    "scenario": "compile-error",
+    "exitCode": 1,
+    "temporaryBuildRemoved": true
+  },
+  {
+    "node": "v24.22.1",
+    "scenario": "no-tests",
+    "exitCode": 1,
+    "temporaryBuildRemoved": true
+  }
+]
