@@ -2,11 +2,11 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { errorMessage } from '@/api/http';
 import type { Page } from '@/api/types';
 
-export function ApiState({ loading, error, empty, retry }: { loading: boolean; error: unknown; empty?: boolean; retry: () => void }) {
+export function ApiState({ loading, error, empty, emptyMessage, retry }: { loading: boolean; error: unknown; empty?: boolean; emptyMessage?: string; retry: () => void }) {
   if (!loading && !error && !empty) return null;
   return <View style={styles.box} accessibilityLiveRegion="polite">
     {loading ? <><ActivityIndicator color="#005b9f" /><Text style={styles.text}>Cargando…</Text></> : <>
-      <Text style={styles.text}>{error ? errorMessage(error) : 'No hay resultados publicados para esta búsqueda.'}</Text>
+      <Text style={styles.text}>{error ? errorMessage(error) : (emptyMessage ?? 'No hay resultados publicados para esta búsqueda.')}</Text>
       <TouchableOpacity accessibilityRole="button" onPress={retry} style={styles.button}><Text style={styles.link}>Reintentar</Text></TouchableOpacity>
     </>}
   </View>;

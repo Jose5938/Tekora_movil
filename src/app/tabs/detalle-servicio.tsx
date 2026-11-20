@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiState } from '@/components/api-state';
-import { PreparationNotice } from '@/components/preparation-notice';
+import { InquiryForm } from '@/components/inquiry-form';
 import { isServiceResource, modalityLabels, resourceId } from '@/api/types';
 
 export default function DetalleServicioScreen() {
@@ -47,7 +47,7 @@ export default function DetalleServicioScreen() {
               <TouchableOpacity style={styles.contactButton} onPress={() => router.push({ pathname: '/tabs/perfil-experto', params: { id: service.provider.id } })}><Text style={styles.contactButtonText}>Ver perfil</Text></TouchableOpacity>
             </View>
           </View>
-          <PreparationNotice>Las reservas, cotizaciones y pagos aún no están disponibles. Consultar este servicio no crea una solicitud.</PreparationNotice>
+          <InquiryForm key={service.id} serviceId={service.id} />
         </>}
       </ScrollView>
     </SafeAreaView>

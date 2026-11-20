@@ -139,6 +139,9 @@ export class ApiClient {
         typeof detail?.message === 'string' ? detail.message : statusMessages[response.status] ?? 'El servidor no pudo completar la operación.',
         fields, response.headers.get('Retry-After'));
     }
+    if (token && notifyUnauthorized && token !== this.token()) {
+      throw new ApiError(401, 'unauthenticated', statusMessages[401]);
+    }
     return payload as T;
   }
 }
