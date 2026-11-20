@@ -23,7 +23,7 @@ export function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : 'No fue posible completar la operación. Reintenta.';
 }
 
-type Options = { method?: 'GET' | 'POST'; body?: unknown; authenticated?: boolean };
+type Options = { method?: 'GET' | 'POST' | 'PATCH'; body?: unknown; authenticated?: boolean };
 type Transport = (url: string, init: RequestInit) => Promise<Pick<Response,
   'ok' | 'status' | 'headers' | 'json' | 'redirected' | 'type'>>;
 
