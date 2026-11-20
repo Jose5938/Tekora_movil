@@ -1,4 +1,5 @@
 import { ApiError, type ApiClient } from './http';
+import { isJourneyCommercial, isUuid, type JourneyCommercial } from './quotes';
 import { isCollection, isRecord, isResource, type Collection, type Resource } from './types';
 
 // Projections consumed by M2.2. The server remains the source of all workflow decisions.
@@ -55,6 +56,7 @@ export type ContractingJourney = {
   participants: { provider: { id: number; display_name: string } };
   progress: { current_stage: Stage; steps: { code: Stage; label: string; status: StepState }[]; closed: boolean };
   next_action: JourneyAction;
+  commercial: JourneyCommercial;
   history: { inquiry: HistoryEvent[]; reservations: HistoryReservation[] };
 };
 
@@ -97,7 +99,7 @@ function isAction(value: unknown): value is JourneyAction {
     typeof value.label === 'string' && typeof value.description === 'string' &&
     oneOf(value.interaction, ['wait', 'navigate']) && typeof value.mobile_execution_available === 'boolean' &&
     oneOf(type, ['inquiry', 'quote', 'reservation', 'review']) &&
-    (type === 'quote' ? typeof id === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id) : positiveId(id));
+    (type === 'quote' ? isUuid(id) : positiveId(id));
 }
 
 function isHistory(value: unknown): value is ContractingJourney['history'] {
@@ -115,7 +117,7 @@ function isJourney(value: unknown): value is ContractingJourney {
   const { provider } = value.participants;
   return value.viewer_role === 'client' && typeof value.inquiry.label === 'string' && isInquirySummary(value.inquiry) &&
     positiveId(provider.id) && typeof provider.display_name === 'string' && isProgress(value.progress) &&
-    isAction(value.next_action) && isHistory(value.history);
+    isAction(value.next_action) && isJourneyCommercial(value.commercial) && isHistory(value.history);
 }
 
 export function isInquiryCollection(value: unknown): value is Collection<Inquiry> {
