@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { api } from '@/api/client';
 import { ApiError, errorMessage } from '@/api/http';
+import { canConfirmReservation, commitReservation, readReadiness, readinessLabels } from '@/api/confirmation';
 import { inquiryPath, isJourneyResource, type ContractingJourney } from '@/api/inquiries';
 import { mxn } from '@/api/quotes';
 import { cancelReservation, isContextResource, isReservationResource, observedHoldSeconds,
@@ -28,13 +29,14 @@ function useRemainingHold(context: ReservationContext | undefined) {
     const timer = setInterval(tick, 250);
     return () => { clearTimeout(first); clearInterval(timer); };
   }, [context]);
-  return context && clock?.context === context ? clock.seconds : undefined;
+  const active = useCallback(() => !!deadline.current && performance.now() < deadline.current.time, []);
+  return { seconds: context && clock?.context === context ? clock.seconds : undefined, active };
 }
 
 export function ReservationDetail({ id }: { id: number }) {
   const router = useRouter();
   const { user } = useSession();
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [decision, setDecision] = useState<'cancel' | 'commit'>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
   const focused = useRef(false);
@@ -58,30 +60,54 @@ export function ReservationDetail({ id }: { id: number }) {
   const current = journey.data?.data.reservation;
   const canCancel = !!reservation && current?.id === id && current.version === reservation.version && current.actions.includes('cancel');
   const observed = context.data?.data.reservation.version === reservation?.version ? context.data?.data : undefined;
-  const seconds = useRemainingHold(observed);
+  const { seconds, active } = useRemainingHold(observed);
+  const readiness = readReadiness(observed?.confirmation_readiness);
+  const canCommit = !!reservation && current?.id === id && current.actions.includes('commit') &&
+    canConfirmReservation(reservation, observed, journey.data?.data.confirmation_readiness, seconds);
 
   function refresh() {
-    setConfirmCancel(false);
+    setDecision(undefined);
     detail.retry();
     context.retry();
     journey.retry();
   }
 
-  async function cancel() {
-    if (!user || !reservation || !canCancel || !confirmCancel || sending.current || !focused.current) return;
-    const scope = reservationScope(user.id, 'cancel', id);
+  async function send(action: 'cancel' | 'commit') {
+    if (!user || !reservation || decision !== action || sending.current || !focused.current ||
+      (action === 'commit' ? !canCommit : !canCancel)) return;
+    const scope = reservationScope(user.id, action, id);
     sending.current = true;
     setBusy(true);
-    setConfirmCancel(false);
+    setDecision(undefined);
     try {
+      if (action === 'commit') {
+        const fresh = await api.request<unknown>(`/reservations/${id}/checkout-context`, { authenticated: true });
+        if (!validateContext(fresh) || !active() ||
+          !canConfirmReservation(reservation, fresh.data, journey.data?.data.confirmation_readiness, seconds)) {
+          throw new ApiError(409, 'conflict', 'La reserva cambió. Actualiza el estado antes de confirmar.');
+        }
+      }
+      if (!focused.current) return;
       const key = reservation.commercial_protocol ? await reservationIntent(scope, { version: reservation.version }) : undefined;
       if (!focused.current) return;
-      await cancelReservation(api, reservation, key);
+      if (action === 'commit' && (!key || !active())) {
+        throw new ApiError(409, 'conflict', 'Terminó el plazo de la retención. Actualiza el estado.');
+      }
+      const result = action === 'commit' ? await commitReservation(api, reservation, key!) :
+        await cancelReservation(api, reservation, key);
       await finishReservationIntent(scope);
-      if (focused.current) setNotice('Reserva cancelada.');
+      if (focused.current) {
+        setNotice(action === 'cancel' ? 'Reserva cancelada.' :
+          result.status === 'confirmed' ? 'Contratación confirmada por Tekora.' :
+            `Estado informado por Tekora: ${reservationLabels[result.status]}.`);
+      }
     } catch (error) {
       if (error instanceof ApiError && [409, 422].includes(error.status)) await finishReservationIntent(scope);
-      if (focused.current) setNotice(errorMessage(error));
+      if (focused.current) {
+        const uncertain = !(error instanceof ApiError) || error.status >= 500 ||
+          ['network', 'invalid_response'].includes(error.code);
+        setNotice(uncertain ? 'No se pudo comprobar la operación. Consulta el estado antes de repetirla.' : errorMessage(error));
+      }
     } finally {
       if (focused.current) refresh();
       sending.current = false;
@@ -105,11 +131,17 @@ export function ReservationDetail({ id }: { id: number }) {
       <ApiState {...journey} />
       {notice && <Text accessibilityLiveRegion="polite" style={styles.text}>{notice}</Text>}
       <ReservationButton label="Actualizar reserva" disabled={busy} onPress={refresh} />
-      {canCancel && (confirmCancel ? <>
+      {reservation.commercial_protocol && observed && <Text style={styles.text}>{readinessLabels[readiness?.state ?? 'unknown']}</Text>}
+      {canCommit && decision !== 'cancel' && (decision === 'commit' ? <>
+        <Text style={styles.text}>Confirma el horario retenido. Esta operación no realiza un cobro.</Text>
+        <ReservationButton label="Confirmar contratación" disabled={busy} onPress={() => void send('commit')} />
+        <ReservationButton label="Volver sin confirmar" onPress={() => setDecision(undefined)} />
+      </> : <ReservationButton label="Revisar confirmación" disabled={busy} onPress={() => setDecision('commit')} />)}
+      {canCancel && decision !== 'commit' && (decision === 'cancel' ? <>
         <Text style={styles.text}>¿Quieres cancelar esta reserva? El servidor comprobará su estado antes de cancelarla.</Text>
-        <ReservationButton label="Confirmar cancelación" disabled={busy} onPress={() => void cancel()} />
-        <ReservationButton label="Conservar reserva" onPress={() => setConfirmCancel(false)} />
-      </> : <ReservationButton label="Cancelar reserva" disabled={busy} onPress={() => setConfirmCancel(true)} />)}
+        <ReservationButton label="Confirmar cancelación" disabled={busy} onPress={() => void send('cancel')} />
+        <ReservationButton label="Conservar reserva" onPress={() => setDecision(undefined)} />
+      </> : <ReservationButton label="Cancelar reserva" disabled={busy} onPress={() => setDecision('cancel')} />)}
       <ReservationButton label="Ver solicitud" onPress={() => router.push({ pathname: '/tabs/solicitud', params: { id: reservation.inquiry_id } })} />
     </>}
   </View>;
