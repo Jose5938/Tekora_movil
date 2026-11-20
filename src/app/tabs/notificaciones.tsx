@@ -66,5 +66,5 @@ const layout = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f8f9fa' },
   header: { padding: 16, flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff' },
   icon: { padding: 6 },
-  content: { padding: 16, gap: 12 },
+  content: { padding: 16, gap: 12, width: '100%', maxWidth: 720, alignSelf: 'center' },
 });

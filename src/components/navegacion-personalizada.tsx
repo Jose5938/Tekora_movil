@@ -8,27 +8,33 @@ export default function NavegacionPersonalizada() {
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const active = {
+    home: pathname === '/tabs',
+    services: ['/tabs/servicios', '/tabs/solicitud', '/tabs/detalle-servicio', '/tabs/reserva'].includes(pathname),
+    messages: pathname === '/tabs/chat',
+    account: pathname === '/tabs/cuenta',
+  };
 
   return (
     <View style={[styles.navegacion, { paddingBottom: insets.bottom > 0 ? insets.bottom + 6 : 12 }]}>
-       <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs')}>
-        <Ionicons name="home-outline" size={24} color={pathname === '/tabs' ? '#005b9f' : '#666'} />
-        <Text style={[styles.navText, pathname === '/tabs' && styles.navTextActive]}>Inicio</Text>
+       <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: active.home }} style={styles.navItem} onPress={() => router.navigate('/tabs')}>
+        <Ionicons name="home-outline" size={24} color={active.home ? '#005b9f' : '#666'} />
+        <Text style={[styles.navText, active.home && styles.navTextActive]}>Inicio</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs/servicios')}>
-        <Ionicons name="document-text-outline" size={24} color={pathname === '/tabs/servicios' ? '#005b9f' : '#666'} />
-        <Text style={[styles.navText, pathname === '/tabs/servicios' && styles.navTextActive]}>Servicios</Text>
+      <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: active.services }} style={styles.navItem} onPress={() => router.navigate('/tabs/servicios')}>
+        <Ionicons name="document-text-outline" size={24} color={active.services ? '#005b9f' : '#666'} />
+        <Text style={[styles.navText, active.services && styles.navTextActive]}>Servicios</Text>
       </TouchableOpacity>
 
-     <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs/chat')}>
-        <Ionicons name="chatbubble-outline" size={24} color={pathname === '/tabs/chat' ? '#005b9f' : '#666'} />
-        <Text style={[styles.navText, pathname === '/tabs/chat' && styles.navTextActive]}>Mensajes</Text>
+     <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: active.messages }} style={styles.navItem} onPress={() => router.navigate('/tabs/chat')}>
+        <Ionicons name="chatbubble-outline" size={24} color={active.messages ? '#005b9f' : '#666'} />
+        <Text style={[styles.navText, active.messages && styles.navTextActive]}>Mensajes</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem} onPress={() => router.navigate('/tabs/cuenta')}>
-        <Ionicons name="person-outline" size={24} color={pathname.includes('cuenta') ? '#005b9f' : '#666'} />
-        <Text style={[styles.navText, pathname.includes('cuenta') && styles.navTextActive]}>Mi cuenta</Text>
+      <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: active.account }} style={styles.navItem} onPress={() => router.navigate('/tabs/cuenta')}>
+        <Ionicons name="person-outline" size={24} color={active.account ? '#005b9f' : '#666'} />
+        <Text style={[styles.navText, active.account && styles.navTextActive]}>Mi cuenta</Text>
       </TouchableOpacity>
     </View>
   );
