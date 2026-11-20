@@ -3,15 +3,16 @@ import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import NavegacionPersonalizada from '@/components/navegacion-personalizada';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ApiState, Pagination } from '@/components/api-state';
-import { PreparationNotice } from '@/components/preparation-notice';
+import { InquiryHistory } from '@/components/inquiry-history';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { isServiceCollection, modalityLabels, type Service } from '@/api/types';
 
 
 export default function ServiciosScreen() {
-  const [tabActiva, setTabActiva] = useState('catalogo');
+  const { vista } = useLocalSearchParams<{ vista?: string }>();
+  const tabActiva = vista === 'historial' ? 'historial' : 'catalogo';
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -23,9 +24,9 @@ export default function ServiciosScreen() {
       {/* Cabecera */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Servicios</Text>
-        <TouchableOpacity accessibilityLabel="Actualizar catálogo" style={styles.iconButton} onPress={services.retry}>
+        {tabActiva === 'catalogo' && <TouchableOpacity accessibilityLabel="Actualizar catálogo" style={styles.iconButton} onPress={services.retry}>
           <Ionicons name="search-outline" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        </TouchableOpacity>}
       </View>
 
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -37,7 +38,7 @@ export default function ServiciosScreen() {
             <Text style={styles.boardTitle}>Tablero de Solicitudes</Text>
           </View>
           <Text style={styles.boardDescription}>
-            La publicación de solicitudes está en preparación. Puedes conocer el formulario; todavía no se envían trabajos ni cotizaciones.
+            Para solicitar un servicio, abre su ficha en el catálogo. La publicación abierta de trabajos sigue en preparación.
           </Text>
           <TouchableOpacity style={styles.boardButton} onPress={() => router.push('/tabs/publicar')}>
                 <Text style={styles.boardButtonText}>Ver formulario en preparación</Text>
@@ -49,14 +50,16 @@ export default function ServiciosScreen() {
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
             style={[styles.tab, tabActiva === 'catalogo' && styles.tabActive]}
-            onPress={() => setTabActiva('catalogo')}
+            accessibilityRole="tab" accessibilityState={{ selected: tabActiva === 'catalogo' }}
+            onPress={() => router.setParams({ vista: 'catalogo' })}
           >
             <Text style={[styles.tabText, tabActiva === 'catalogo' && styles.tabTextActive]}>Catálogo público</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={[styles.tab, tabActiva === 'historial' && styles.tabActive]}
-            onPress={() => setTabActiva('historial')}
+            accessibilityRole="tab" accessibilityState={{ selected: tabActiva === 'historial' }}
+            onPress={() => router.setParams({ vista: 'historial' })}
           >
             <Text style={[styles.tabText, tabActiva === 'historial' && styles.tabTextActive]}>Historial</Text>
           </TouchableOpacity>
@@ -73,7 +76,7 @@ export default function ServiciosScreen() {
             <Pagination meta={services.data?.meta} onPage={setPage} />
           </>
         ) : (
-          <PreparationNotice>El historial de solicitudes y citas aún no está disponible. Aquí no se muestran reservas confirmadas.</PreparationNotice>
+          <InquiryHistory />
         )}
 
       </ScrollView>

@@ -4,6 +4,7 @@ const { createServer } = require('node:http');
 const { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } = require('node:fs');
 const { resolve, join, extname } = require('node:path');
 const assert = require('node:assert/strict');
+const { inquiry, journey, collection } = require('../tests/fixtures/inquiries.cjs');
 const root = resolve(process.env.TEKORA_WEB_PREVIEW_DIR || 'work/10a-web-preview');
 const evidence = resolve(process.env.TEKORA_BROWSER_EVIDENCE_DIR || 'work/10a-browser-evidence');
 mkdirSync(evidence, { recursive: true });
@@ -21,6 +22,7 @@ const service = { id:21, title:'Soporte de computadoras', description:'Diagnóst
 const meta = { current_page:1, per_page:12, last_page:1, total:1 };
 let mode='normal';
 let logins=0, logouts=0;
+let inquiryCreated=false, inquiryReadMode='normal', inquiryPosts=0;
 const requests=[];
 const results=[];
 (async () => {
@@ -58,9 +60,37 @@ const results=[];
         if(input.password==='incorrecta') {status=401;body=error('invalid_credentials','No se pudo iniciar sesión con los datos proporcionados.');}
         else if(input.password==='validation') {status=422;body=error('validation_failed','Revisa los datos.',{email:['Correo rechazado por el servidor.']});}
         else if(input.password==='limited') {status=429;body=error('too_many_requests','Demasiados intentos. Espera antes de reintentar.');}
-        else body={data:{token_type:'Bearer',access_token:'synthetic-browser-token',expires_at:new Date(Date.now()+(input.password==='short-session'?3000:3600000)).toISOString(),user:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',experience:'client',permissions:['client.appointments.view']}}};
+        else body={data:{token_type:'Bearer',access_token:'synthetic-browser-token',expires_at:new Date(Date.now()+(input.password==='short-session'?3000:3600000)).toISOString(),user:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',experience:'client',permissions:['client.appointments.view','client.inquiries.manage']}}};
       } else if(path==='/auth/logout') {logouts++;body={data:{revoked:true}};}
-      else if(path==='/me') body={data:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',experience:'client',permissions:['client.appointments.view']}};
+      else if(path==='/me') body={data:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',experience:'client',permissions:['client.appointments.view','client.inquiries.manage']}};
+      else if(path==='/services/21/inquiries') {
+        inquiryPosts++;
+        assert.equal(request.method(),'POST');
+        assert.ok(request.headers().authorization);
+        const input=request.postDataJSON();
+        assert.deepEqual(Object.keys(input),['message']);
+        if(input.message==='El servidor rechaza este texto.') {
+          status=422;body=error('validation_failed','Revisa los datos.',{message:['Revisa la descripción enviada.']});
+        } else if(input.message==='No se podrá verificar esta solicitud.') {
+          status=503;body=error('temporarily_unavailable','El resultado no se pudo verificar.');
+        } else {
+          assert.equal(input.message,inquiry.message);
+          status=inquiryCreated?200:201;
+          inquiryCreated=true;
+          body={data:inquiry};
+        }
+      }
+      else if(path==='/inquiries') {
+        assert.ok(request.headers().authorization);
+        body=inquiryCreated?collection:{...collection,data:[],meta:{...collection.meta,total:0}};
+      }
+      else if(path==='/inquiries/42' || path==='/inquiries/42/journey') {
+        assert.ok(request.headers().authorization);
+        if(inquiryReadMode==='missing') {status=404;body=error('not_found','El recurso no está disponible.');}
+        else if(inquiryReadMode==='unavailable' && path.endsWith('/journey')) {
+          status=503;body=error('temporarily_unavailable','No se puede consultar el seguimiento.');
+        } else body={data:path.endsWith('/journey')?journey:inquiry};
+      }
       else if(mode==='offline') {await route.abort('failed');return;}
       else if(path==='/providers') body={data:mode==='empty'?[]:[provider],meta:{...meta,total:mode==='empty'?0:1}};
       else if(path==='/services' && mode==='malformed') body={data:{...service},meta};
@@ -81,7 +111,7 @@ const results=[];
       await page.getByLabel('Contraseña',{exact:true}).fill(password);
       await page.getByRole('button',{name:'Iniciar sesión',exact:true}).click();
     };
-    for (const path of ['/tabs/cuenta','/tabs/chat','/tabs/reserva','/tabs/pago']) {
+    for (const path of ['/tabs/cuenta','/tabs/chat','/tabs/reserva','/tabs/pago','/tabs/solicitud?id=42']) {
       await page.goto('http://127.0.0.1:18080'+path);
       await visible('Te damos la bienvenida a Tekora');
     }
@@ -115,10 +145,9 @@ const results=[];
     await visible('Diagnóstico y mantenimiento.');
     assert.ok(requests.some(r=>r.path==='/providers/7'));
     await page.getByText('Solicitar servicio',{exact:true}).click();
-    await visible('Solicitudes en preparación');
-    await page.getByText('Entendido',{exact:true}).click();
-    results.push('Perfil obtiene /providers/7; solicitar muestra explicación sin enviar operación.');
-    await page.getByText('Servicios',{exact:true}).last().click();
+    await visible('Solicita un servicio publicado');
+    await page.getByText('Abrir catálogo',{exact:true}).click();
+    results.push('Perfil obtiene /providers/7; la acción de solicitar lleva al catálogo sin enviar una petición de escritura.');
     await visible('Soporte de computadoras');
     await page.getByText('Soporte de computadoras',{exact:true}).click();
     await visible('Detalle del servicio');
@@ -155,6 +184,59 @@ const results=[];
     await visible('Soporte de computadoras');
     results.push('Catálogo rechaza JSON malformado y 503 no JSON; permite reintento de lectura.');
 
+    await page.getByRole('tab',{name:'Historial',exact:true}).click();
+    await visible('Todavía no tienes solicitudes.');
+    await page.getByRole('tab',{name:'Catálogo público',exact:true}).click();
+    await page.getByText('Soporte de computadoras',{exact:true}).click();
+    const fillInquiry = message => page.getByLabel('Descripción de la solicitud',{exact:true}).fill(message);
+    const sendInquiry = () => page.getByRole('button',{name:'Enviar solicitud',exact:true}).click();
+    await sendInquiry();
+    await visible('Describe lo que necesitas con entre 10 y 2000 caracteres.');
+    assert.equal(inquiryPosts,0);
+    await fillInquiry('No se podrá verificar esta solicitud.');
+    await sendInquiry();
+    await visible('No se pudo comprobar el envío. Revisa tu historial antes de crear otra solicitud.');
+    assert.equal(inquiryPosts,1);
+    await page.getByRole('button',{name:'Ver historial',exact:true}).click();
+    await visible('Todavía no tienes solicitudes.');
+    await page.getByRole('tab',{name:'Catálogo público',exact:true}).click();
+    await page.getByText('Soporte de computadoras',{exact:true}).click();
+    await fillInquiry('El servidor rechaza este texto.');
+    await sendInquiry();
+    await visible('Revisa la descripción enviada.');
+    await fillInquiry(inquiry.message);
+    await sendInquiry();
+    await visible('Espera la respuesta del prestador');
+    await visible('Solicitud #42 · Pendiente');
+    for(const step of journey.progress.steps) await visible(step.label);
+    await visible('Historial de contratación');
+    await visible('Solicitud enviada');
+    assert.equal(inquiryPosts,3);
+    results.push('Solicitudes: historial vacío, validación local y 422, 503 de escritura sin reenvío y creación 201 con cinco etapas.');
+    inquiryReadMode='unavailable';
+    await page.getByLabel('Actualizar solicitud',{exact:true}).click();
+    await visible('No se puede consultar el seguimiento.');
+    inquiryReadMode='normal';
+    await page.getByLabel('Actualizar solicitud',{exact:true}).click();
+    await visible('Espera la respuesta del prestador');
+    inquiryReadMode='missing';
+    await page.getByLabel('Actualizar solicitud',{exact:true}).click();
+    await visible('La solicitud no está disponible para esta cuenta.');
+    assert.equal(await page.getByText(inquiry.message,{exact:true}).count(),0);
+    inquiryReadMode='normal';
+    await page.getByLabel('Actualizar solicitud',{exact:true}).click();
+    await visible('Solicitud #42 · Pendiente');
+    await page.getByLabel('Volver',{exact:true}).click();
+    await visible('Detalle del servicio');
+    await page.getByLabel('Volver',{exact:true}).click();
+    await page.getByRole('tab',{name:'Historial',exact:true}).click();
+    await page.getByRole('button',{name:'Solicitud #42: Soporte de computadoras, Pendiente'}).click();
+    await visible('Espera la respuesta del prestador');
+    await page.screenshot({path:join(evidence,'seguimiento-solicitud.png'),fullPage:true});
+    await page.getByLabel('Volver',{exact:true}).click();
+    await visible('Mis solicitudes');
+    results.push('Historial propio reabre el detalle; 503 de lectura admite reintento y 404 oculta los datos privados.');
+
     await page.getByText('Mensajes',{exact:true}).click();
     await visible('Chat de demostración');
     assert.equal(await page.getByLabel('Envío en preparación',{exact:true}).isEnabled(),false);
@@ -187,7 +269,7 @@ const results=[];
     await page.reload();
     await visible('Te damos la bienvenida a Tekora');
     results.push('Recargar vista web exige login, sin almacenamiento inseguro.');
-    assert.ok(requests.filter(r=>r.path.startsWith('/services')||r.path.startsWith('/providers')).every(r=>!r.hasBearer));
+    assert.ok(requests.filter(r=>r.method==='GET'&&(r.path.startsWith('/services')||r.path.startsWith('/providers'))).every(r=>!r.hasBearer));
     assert.deepEqual(errors,[]);
     writeFileSync(join(evidence,'results.json'),JSON.stringify({results,requests,consolePageErrors:errors},null,2));
     console.log(JSON.stringify({passed:results.length,results,consolePageErrors:errors},null,2));

@@ -40,7 +40,7 @@ export default function PerfilExpertoScreen() {
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.primaryButton} onPress={() => setModalVisible(true)}>
               <Text style={styles.primaryButtonText}>Solicitar servicio</Text>
-              <Text style={styles.primaryButtonSub}>En preparación</Text>
+              <Text style={styles.primaryButtonSub}>Desde el catálogo</Text>
             </TouchableOpacity>
             <TouchableOpacity accessibilityLabel="Ver chat en preparación" style={styles.secondaryButton} onPress={() => router.push('/tabs/chat')}>
               <Ionicons name="chatbubble-ellipses-outline" size={24} color="#005b9f" />
@@ -62,9 +62,9 @@ export default function PerfilExpertoScreen() {
       </ScrollView>
       <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}><View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Solicitudes en preparación</Text>
-          <PreparationNotice>Todavía no es posible solicitar, reservar ni enviar mensajes al prestador desde la app.</PreparationNotice>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}><Text style={styles.cancelButtonText}>Entendido</Text></TouchableOpacity>
+          <Text style={styles.modalTitle}>Solicita un servicio publicado</Text>
+          <PreparationNotice>Elige un servicio publicado en el catálogo y abre su ficha para enviar la solicitud.</PreparationNotice>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => { setModalVisible(false); router.navigate('/tabs/servicios'); }}><Text style={styles.cancelButtonText}>Abrir catálogo</Text></TouchableOpacity>
         </View></View>
       </Modal>
       <NavegacionPersonalizada />
