@@ -79,10 +79,7 @@ export default function PagoScreen() {
   const deadline = useRef<{ expires: string; at: number } | null>(null);
 
   useEffect(() => {
-    if (snapshot?.hold?.state !== 'held') {
-      setSeconds(0);
-      return;
-    }
+    if (snapshot?.hold?.state !== 'held') return;
     const candidate = performance.now() + observedHoldSeconds(snapshot) * 1000;
     const expires = snapshot.hold.expires_at;
     const at = deadline.current?.expires === expires ? Math.min(deadline.current.at, candidate) : candidate;
