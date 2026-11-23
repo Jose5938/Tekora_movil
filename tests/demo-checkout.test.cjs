@@ -10,7 +10,7 @@ const { id: quoteId } = require('./fixtures/quotes.cjs');
 const key = 'cdf84a3d-760a-4a1f-9de4-0e506e0b9ae7';
 const base = {
   reservation_id: 17, quote_id: quoteId, reservation_status: 'held', selection_verified: false,
-  method: null, status: 'not_selected', reference: null,
+  method: null, status: 'not_selected', reference: null, attempted_at: null, received_at: null,
   can_choose: true, can_confirm: false, amount: getContext().amount,
   server_now: '2026-11-22T20:00:00Z', expires_at: '2026-11-22T20:15:00Z',
   remaining_seconds: 900, synthetic_only: true,
@@ -25,6 +25,7 @@ test('respuesta del checkout ficticio valida identidad, dinero y estados sin exp
   assert.equal(isDemoCheckoutResource({ data: { ...base, synthetic_only: false } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, quote_id: 'wrong' } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, selection_verified: 'true' } }), false);
+  assert.equal(isDemoCheckoutResource({ data: { ...base, attempted_at: 'not-a-date' } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, reservation_id: 0 } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, amount: { ...base.amount, commission_basis_points: 0 } } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, remaining_seconds: 901 } }), false);
@@ -70,7 +71,8 @@ test('Cotizaciones solo indica Pagado (prueba) para la cotización exacta y rese
   assert.equal(quotePaymentView('dac82fd0-0f68-4826-8e56-cf9883939d2a', approved), null);
   assert.equal(quotePaymentView(quoteId, { ...approved, selection_verified: false })?.label, 'Pago de prueba pendiente');
   assert.equal(quotePaymentView(quoteId, { ...approved, reservation_status: 'held' })?.tone, 'pending');
-  assert.equal(quotePaymentView(quoteId, { ...approved, reservation_status: 'cancelled' })?.tone, 'warning');
+  assert.deepEqual(quotePaymentView(quoteId, { ...approved, reservation_status: 'cancelled' }),
+    { label: 'Reserva cancelada · aprobación de prueba histórica', tone: 'warning' });
   assert.equal(quotePaymentView(quoteId, null), null);
 });
 
@@ -79,6 +81,8 @@ test('Cotizaciones distingue efectivo pendiente de dinero recibido y rechazos', 
     selection_verified: true, reservation_status: 'confirmed' };
   assert.deepEqual(quotePaymentView(quoteId, cash), { label: 'Efectivo pendiente', tone: 'pending' });
   assert.equal(quotePaymentView(quoteId, { ...cash, status: 'cash_received' })?.label, 'Efectivo recibido (prueba)');
+  assert.deepEqual(quotePaymentView(quoteId, { ...cash, reservation_status: 'cancelled' }),
+    { label: 'Efectivo no recibido · reserva cancelada', tone: 'warning' });
   assert.equal(quotePaymentView(quoteId, { ...cash, method: 'card', status: 'declined',
     selection_verified: false })?.tone, 'warning');
   assert.equal(quotePaymentView(quoteId, { ...cash, method: 'card', status: 'temporary_failure',
