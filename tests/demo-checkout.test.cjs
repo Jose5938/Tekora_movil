@@ -2,13 +2,15 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { join } = require('node:path');
 const { ApiClient } = require(join(process.env.TEKORA_TEST_BUILD, 'api/http.js'));
-const { isDemoCheckoutResource, submitDemoCheckout, choiceLabel } =
+const { isDemoCheckoutResource, submitDemoCheckout, choiceLabel, quotePaymentView } =
   require(join(process.env.TEKORA_TEST_BUILD, 'api/demo-checkout.js'));
 const { getContext } = require('./fixtures/reservations.cjs');
+const { id: quoteId } = require('./fixtures/quotes.cjs');
 
 const key = 'cdf84a3d-760a-4a1f-9de4-0e506e0b9ae7';
 const base = {
-  reservation_id: 17, method: null, status: 'not_selected', reference: null,
+  reservation_id: 17, quote_id: quoteId, reservation_status: 'held', selection_verified: false,
+  method: null, status: 'not_selected', reference: null,
   can_choose: true, can_confirm: false, amount: getContext().amount,
   server_now: '2026-11-22T20:00:00Z', expires_at: '2026-11-22T20:15:00Z',
   remaining_seconds: 900, synthetic_only: true,
@@ -21,6 +23,8 @@ function client(transport) {
 test('respuesta del checkout ficticio valida identidad, dinero y estados sin exponer datos bancarios', () => {
   assert.equal(isDemoCheckoutResource({ data: base }), true);
   assert.equal(isDemoCheckoutResource({ data: { ...base, synthetic_only: false } }), false);
+  assert.equal(isDemoCheckoutResource({ data: { ...base, quote_id: 'wrong' } }), false);
+  assert.equal(isDemoCheckoutResource({ data: { ...base, selection_verified: 'true' } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, reservation_id: 0 } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, amount: { ...base.amount, commission_basis_points: 0 } } }), false);
   assert.equal(isDemoCheckoutResource({ data: { ...base, remaining_seconds: 901 } }), false);
@@ -55,4 +59,28 @@ test('no se escribe con reserva o UUID inválidos y no se oculta un rechazo del 
   await assert.rejects(submitDemoCheckout(api, -1, { method: 'cash' }, key), { status: 422 });
   await assert.rejects(submitDemoCheckout(api, 17, { method: 'cash' }, 'invalido'), { status: 422 });
   await assert.rejects(submitDemoCheckout(api, 17, { method: 'cash' }, key), { status: 409 });
+});
+
+
+test('Cotizaciones solo indica Pagado (prueba) para la cotización exacta y reserva confirmada', () => {
+  const approved = { ...base, method: 'card', status: 'test_approved',
+    selection_verified: true, reservation_status: 'confirmed', can_confirm: false };
+  assert.equal(isDemoCheckoutResource({ data: approved }), true);
+  assert.deepEqual(quotePaymentView(quoteId, approved), { label: 'Pagado (prueba)', tone: 'paid' });
+  assert.equal(quotePaymentView('dac82fd0-0f68-4826-8e56-cf9883939d2a', approved), null);
+  assert.equal(quotePaymentView(quoteId, { ...approved, selection_verified: false })?.label, 'Pago de prueba pendiente');
+  assert.equal(quotePaymentView(quoteId, { ...approved, reservation_status: 'held' })?.tone, 'pending');
+  assert.equal(quotePaymentView(quoteId, { ...approved, reservation_status: 'cancelled' })?.tone, 'warning');
+  assert.equal(quotePaymentView(quoteId, null), null);
+});
+
+test('Cotizaciones distingue efectivo pendiente de dinero recibido y rechazos', () => {
+  const cash = { ...base, method: 'cash', status: 'awaiting_cash',
+    selection_verified: true, reservation_status: 'confirmed' };
+  assert.deepEqual(quotePaymentView(quoteId, cash), { label: 'Efectivo pendiente', tone: 'pending' });
+  assert.equal(quotePaymentView(quoteId, { ...cash, status: 'cash_received' })?.label, 'Efectivo recibido (prueba)');
+  assert.equal(quotePaymentView(quoteId, { ...cash, method: 'card', status: 'declined',
+    selection_verified: false })?.tone, 'warning');
+  assert.equal(quotePaymentView(quoteId, { ...cash, method: 'card', status: 'temporary_failure',
+    selection_verified: false })?.tone, 'warning');
 });
