@@ -190,7 +190,7 @@ function AmountDetails({ amount }: { amount: Amount }) {
   return <>
     <Text style={styles.amount}>{mxn(amount.total_cents)}</Text>
     <Text style={styles.body}>Comisión Tekora 15 % incluida: {mxn(amount.commission_cents)}</Text>
-    <Text style={styles.body}>Importe del prestador: {mxn(amount.provider_cents)}</Text>
+    <Text style={styles.body}>Total para el prestador: {mxn(amount.provider_cents)}</Text>
   </>;
 }
 
