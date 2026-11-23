@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { api } from '@/api/client';
 import { ApiError, errorMessage } from '@/api/http';
+import { demoCheckoutPath, isDemoCheckoutResource, quotePaymentView, type DemoCheckout } from '@/api/demo-checkout';
 import type { ContractingJourney } from '@/api/inquiries';
 import { finishQuoteIntent, quoteIntent } from '@/api/quote-intent';
 import { acceptQuote, isQuoteCollection, isQuoteResource, issueQuote, mxn, quotePath, quotesPath,
@@ -29,10 +30,6 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
   const [acceptanceUncertain, setAcceptanceUncertain] = useState(false);
   const focused = useRef(false);
   const writing = useRef(false);
-  useFocusEffect(useCallback(() => {
-    focused.current = true;
-    return () => { focused.current = false; };
-  }, []));
 
   const validateList = useCallback((value: unknown): value is Collection<CommercialQuote> =>
     isQuoteCollection(value) && value.data.every(quote => quote.inquiry_id === inquiryId && quote.client_id === account),
@@ -42,6 +39,22 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
   [selected, inquiryId, account]);
   const history = useApiResource(`${quotesPath(inquiryId)}?page=${page}`, validateList, true);
   const detail = useApiResource(selected ? quotePath(selected) : null, validateDetail, true);
+  const reservationId = journey?.commercial.mode === 'quoted' ? journey.reservation?.id : undefined;
+  const validatePayment = useCallback((value: unknown): value is Resource<DemoCheckout> =>
+    isDemoCheckoutResource(value) && value.data.reservation_id === reservationId, [reservationId]);
+  const payment = useApiResource(reservationId ? demoCheckoutPath(reservationId) : null, validatePayment, true);
+  // Refresh on return from checkout/reservation, not on every render. Avoid the
+  // unstable focus/refetch loop previously found in reservation-detail.
+  const latestPaymentRetry = useRef(payment.retry);
+  useEffect(() => { latestPaymentRetry.current = payment.retry; }, [payment.retry]);
+  const visited = useRef(false);
+  useFocusEffect(useCallback(() => {
+    focused.current = true;
+    if (visited.current) latestPaymentRetry.current();
+    visited.current = true;
+    return () => { focused.current = false; };
+  }, []));
+  const currentPayment = payment.data?.data ?? null;
   const quote = detail.data?.data;
   const action = journey?.next_action;
   const commercial = journey?.commercial;
@@ -54,6 +67,7 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
     setConfirming(false);
     history.retry();
     if (selected) detail.retry();
+    if (reservationId) payment.retry();
     refreshJourney();
   }
 
@@ -111,6 +125,7 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
     {commercial?.agreed_amount && <View style={styles.agreed}>
       <Text style={styles.title}>Importe acordado</Text>
       <AmountDetails amount={commercial.agreed_amount} />
+      {commercial.quote && <PaymentBadge quoteId={commercial.quote.id} checkout={currentPayment} />}
     </View>}
     {notice && <Text accessibilityLiveRegion="polite" style={styles.body}>{notice}</Text>}
     {canIssue && <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => void send('issue')} style={styles.button}>
@@ -125,6 +140,7 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
       onPress={() => select(item.id)} style={styles.listItem}>
       <Text style={styles.title}>{mxn(item.amount.total_cents)}</Text>
       <Text style={styles.body}>{labels[item.acceptance.state]} · {quoteDate(item.issued_at)}</Text>
+      <PaymentBadge quoteId={item.id} checkout={currentPayment} />
     </TouchableOpacity>)}
     <Pagination meta={history.data?.meta} onPage={setPage} />
     {selected && <ApiState {...detail} />}
@@ -132,6 +148,7 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
       <Text style={styles.title}>Detalle de la cotización</Text>
       <AmountDetails amount={quote.amount} />
       <Text style={styles.body}>{labels[quote.acceptance.state]}</Text>
+      <PaymentBadge quoteId={quote.id} checkout={currentPayment} />
       <Text style={styles.body}>Versión de precio {quote.price_version}</Text>
       {quote.acceptance.accepted_at
         ? <Text style={styles.body}>Aceptada el {quoteDate(quote.acceptance.accepted_at)}</Text>
@@ -155,6 +172,16 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
   </View>;
 }
 
+function PaymentBadge({ quoteId, checkout }: { quoteId: string; checkout: DemoCheckout | null }) {
+  const state = quotePaymentView(quoteId, checkout);
+  if (!state) return null;
+  return <View style={[styles.paymentBadge, state.tone === 'paid' && styles.paymentPaid,
+    state.tone === 'warning' && styles.paymentWarning]}>
+    <Text style={[styles.paymentLabel, state.tone === 'paid' && styles.paymentPaidLabel,
+      state.tone === 'warning' && styles.paymentWarningLabel]}>{state.label}</Text>
+  </View>;
+}
+
 function AmountDetails({ amount }: { amount: Amount }) {
   return <>
     <Text style={styles.amount}>{mxn(amount.total_cents)}</Text>
@@ -175,4 +202,11 @@ const styles = StyleSheet.create({
   listItem: { padding: 12, borderWidth: 1, borderColor: '#e5ecf3', borderRadius: 12, gap: 4 },
   button: { backgroundColor: '#005b9f', borderRadius: 12, padding: 12, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: 'bold' },
+  paymentBadge: { alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 10,
+    borderRadius: 10, backgroundColor: '#eaf4fc', borderWidth: 1, borderColor: '#c7e1f2', marginTop: 5 },
+  paymentPaid: { backgroundColor: '#e8f8ee', borderColor: '#b9e5ca' },
+  paymentWarning: { backgroundColor: '#fff4e6', borderColor: '#f0d5a9' },
+  paymentLabel: { fontSize: 12, fontWeight: '800', color: '#005b9f' },
+  paymentPaidLabel: { color: '#176844' },
+  paymentWarningLabel: { color: '#935d1f' },
 });
