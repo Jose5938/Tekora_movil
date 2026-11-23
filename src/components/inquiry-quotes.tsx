@@ -11,6 +11,7 @@ import { acceptQuote, isQuoteCollection, isQuoteResource, issueQuote, mxn, quote
 import type { Collection, Resource } from '@/api/types';
 import { useSession } from '@/auth/context';
 import { ApiState, Pagination } from '@/components/api-state';
+import { PaymentReceipt } from '@/components/payment-receipt';
 import { useApiResource } from '@/hooks/use-api-resource';
 
 const labels = { pending: 'Pendiente de aceptación', accepted: 'Aceptada', expired: 'Vencida' };
@@ -125,7 +126,10 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
     {commercial?.agreed_amount && <View style={styles.agreed}>
       <Text style={styles.title}>Importe acordado</Text>
       <AmountDetails amount={commercial.agreed_amount} />
-      {commercial.quote && <PaymentBadge quoteId={commercial.quote.id} checkout={currentPayment} />}
+      {commercial.quote && <>
+        <PaymentBadge quoteId={commercial.quote.id} checkout={currentPayment} />
+        <PaymentReceipt quoteId={commercial.quote.id} checkout={currentPayment} />
+      </>}
     </View>}
     {notice && <Text accessibilityLiveRegion="polite" style={styles.body}>{notice}</Text>}
     {canIssue && <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => void send('issue')} style={styles.button}>
