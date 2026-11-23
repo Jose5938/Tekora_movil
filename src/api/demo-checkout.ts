@@ -1,12 +1,16 @@
 import { ApiError, type ApiClient } from './http';
 import { isAmount, isUuid, type Amount } from './quotes';
 import { isRecord, isResource, type Resource } from './types';
+import { reservationLabels } from './reservations';
 
 export type DemoCheckoutStatus =
   | 'not_selected' | 'test_approved' | 'declined' | 'temporary_failure' | 'awaiting_cash' | 'cash_received';
 
 export type DemoCheckout = {
   reservation_id: number;
+  quote_id: string | null;
+  reservation_status: keyof typeof reservationLabels;
+  selection_verified: boolean;
   method: 'card' | 'cash' | null;
   status: DemoCheckoutStatus;
   reference: string | null;
@@ -25,6 +29,9 @@ const statuses: DemoCheckoutStatus[] = [
 
 export function isDemoCheckout(value: unknown): value is DemoCheckout {
   return isRecord(value) && Number.isSafeInteger(value.reservation_id) && Number(value.reservation_id) > 0 &&
+    (value.quote_id === null || isUuid(value.quote_id)) &&
+    typeof value.reservation_status === 'string' && Object.hasOwn(reservationLabels, value.reservation_status) &&
+    typeof value.selection_verified === 'boolean' &&
     (value.method === null || value.method === 'card' || value.method === 'cash') &&
     statuses.some(status => status === value.status) &&
     (value.reference === null || typeof value.reference === 'string') &&
@@ -75,4 +82,41 @@ export function choiceLabel(status: DemoCheckoutStatus): string {
     case 'temporary_failure': return 'Fallo temporal de prueba';
     default: return 'Sin método seleccionado';
   }
+}
+
+
+export type QuotePaymentView = { label: string; tone: 'paid' | 'pending' | 'warning' };
+
+/**
+ * Display a badge ONLY for the quote that owns the synthetic reservation.
+ * Approval is not a real banking transaction; a reserved slot and a simulated
+ * success are two different facts. No badge from ambiguous or unbound data.
+ */
+export function quotePaymentView(quoteId: string, checkout: DemoCheckout | null): QuotePaymentView | null {
+  if (!checkout || !checkout.synthetic_only || !isUuid(quoteId) || checkout.quote_id !== quoteId) return null;
+
+  if (checkout.method === 'card' && checkout.status === 'test_approved' && checkout.selection_verified) {
+    if (checkout.reservation_status === 'confirmed' || checkout.reservation_status === 'completed') {
+      return { label: 'Pagado (prueba)', tone: 'paid' };
+    }
+    if (checkout.reservation_status === 'held') {
+      return { label: 'Tarjeta aprobada (prueba) · falta confirmar reserva', tone: 'pending' };
+    }
+    return { label: 'Tarjeta aprobada (prueba) · reserva no activa', tone: 'warning' };
+  }
+  if (checkout.method === 'cash' && checkout.selection_verified) {
+    if (checkout.status === 'cash_received') {
+      return { label: 'Efectivo recibido (prueba)', tone: 'paid' };
+    }
+    if (checkout.status === 'awaiting_cash') {
+      return { label: 'Efectivo pendiente', tone: 'pending' };
+    }
+  }
+  if (checkout.method === 'card' && checkout.status === 'declined') {
+    return { label: 'Tarjeta rechazada (prueba)', tone: 'warning' };
+  }
+  if (checkout.method === 'card' && checkout.status === 'temporary_failure') {
+    return { label: 'Pago no completado (prueba)', tone: 'warning' };
+  }
+  return { label: 'Pago de prueba pendiente', tone: 'pending' };
 }
