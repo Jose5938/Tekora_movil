@@ -53,17 +53,25 @@ export function ReservationDetail({ id }: { id: number }) {
   const validateJourney = useCallback((value: unknown): value is Resource<ContractingJourney> =>
     isJourneyResource(value) && value.data.inquiry.id === inquiryId, [inquiryId]);
   const journey = useApiResource(inquiryId ? `${inquiryPath(inquiryId)}/journey` : null, validateJourney, true);
-  // Returning from the checkout must re-read the authoritative commit readiness.
-  const retryDetail = detail.retry;
-  const retryContext = context.retry;
-  const retryJourney = journey.retry;
+  // Keep the focus callback stable while the dependent request paths become available.
+  // If a retry temporarily clears reservation data, context and journey paths become null:
+  // depending on their retry functions here would re-run the focus effect indefinitely.
+  const latestRetry = useRef({ detail: detail.retry, context: context.retry, journey: journey.retry });
+  useEffect(() => {
+    latestRetry.current = { detail: detail.retry, context: context.retry, journey: journey.retry };
+  }, [detail.retry, context.retry, journey.retry]);
+  const hasFocused = useRef(false);
   useFocusEffect(useCallback(() => {
     focused.current = true;
-    retryDetail();
-    retryContext();
-    retryJourney();
+    // Initial mount already fetches all resources. Refresh only on a later focus.
+    if (hasFocused.current) {
+      latestRetry.current.detail();
+      latestRetry.current.context();
+      latestRetry.current.journey();
+    }
+    hasFocused.current = true;
     return () => { focused.current = false; };
-  }, [retryDetail, retryContext, retryJourney]));
+  }, []));
   const current = journey.data?.data.reservation;
   const canCancel = !!reservation && current?.id === id && current.version === reservation.version && current.actions.includes('cancel');
   const observed = context.data?.data.reservation.version === reservation?.version ? context.data?.data : undefined;
