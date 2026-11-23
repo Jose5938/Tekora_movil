@@ -1,0 +1,159 @@
+
+> tekora_movil@1.0.0 test
+> node scripts/test-api.cjs
+
+TAP version 13
+# Subtest: login real: POST exacto, guarda solo credencial y expone identidad
+ok 1 - login real: POST exacto, guarda solo credencial y expone identidad
+  ---
+  duration_ms: 179.599891
+  ...
+# Subtest: login incorrecto 401 no crea ni guarda sesión
+ok 2 - login incorrecto 401 no crea ni guarda sesión
+  ---
+  duration_ms: 5.851024
+  ...
+# Subtest: doble pulsación de login produce una sola petición y un guardado
+ok 3 - doble pulsación de login produce una sola petición y un guardado
+  ---
+  duration_ms: 1.006603
+  ...
+# Subtest: transporte predeterminado conserva el contexto global de fetch
+ok 4 - transporte predeterminado conserva el contexto global de fetch
+  ---
+  duration_ms: 0.700733
+  ...
+# Subtest: no inicia sesión si la credencial expira durante el guardado seguro
+ok 5 - no inicia sesión si la credencial expira durante el guardado seguro
+  ---
+  duration_ms: 0.752832
+  ...
+# Subtest: restauración mantiene checking hasta /me y usa su identidad actual
+ok 6 - restauración mantiene checking hasta /me y usa su identidad actual
+  ---
+  duration_ms: 15.900039
+  ...
+# Subtest: credencial expirada al abrir: elimina sin llamar al servidor
+ok 7 - credencial expirada al abrir: elimina sin llamar al servidor
+  ---
+  duration_ms: 0.416706
+  ...
+# Subtest: expiración con app abierta elimina token y cierra acceso privado
+ok 8 - expiración con app abierta elimina token y cierra acceso privado
+  ---
+  duration_ms: 6.319118
+  ...
+# Subtest: no restaura identidad si expira mientras /me está pendiente
+ok 9 - no restaura identidad si expira mientras /me está pendiente
+  ---
+  duration_ms: 45.194683
+  ...
+# Subtest: revocación 401 (json) elimina token incluso sin JSON
+ok 10 - revocación 401 (json) elimina token incluso sin JSON
+  ---
+  duration_ms: 2.364754
+  ...
+# Subtest: revocación 401 (html) elimina token incluso sin JSON
+ok 11 - revocación 401 (html) elimina token incluso sin JSON
+  ---
+  duration_ms: 0.820914
+  ...
+# Subtest: 401 de una operación protegida durante sesión también cierra acceso
+ok 12 - 401 de una operación protegida durante sesión también cierra acceso
+  ---
+  duration_ms: 0.938651
+  ...
+# Subtest: logout llama al servidor con Bearer, revoca y elimina localmente
+ok 13 - logout llama al servidor con Bearer, revoca y elimina localmente
+  ---
+  duration_ms: 1.286584
+  ...
+# Subtest: logout sin conexión: cierra localmente e informa revocación no confirmada
+ok 14 - logout sin conexión: cierra localmente e informa revocación no confirmada
+  ---
+  duration_ms: 4.633885
+  ...
+# Subtest: acceso sin token no transmite peticiones protegidas
+ok 15 - acceso sin token no transmite peticiones protegidas
+  ---
+  duration_ms: 0.23347
+  ...
+# Subtest: catálogo público y listas vacías no envían Bearer aunque haya sesión
+ok 16 - catálogo público y listas vacías no envían Bearer aunque haya sesión
+  ---
+  duration_ms: 6.956506
+  ...
+# Subtest: servicio inexistente 404 conserva sesión y expone código de error
+ok 17 - servicio inexistente 404 conserva sesión y expone código de error
+  ---
+  duration_ms: 21.345605
+  ...
+# Subtest: errores 401/403/404/409/422/429 interpretan code/message/fields y Retry-After
+ok 18 - errores 401/403/404/409/422/429 interpretan code/message/fields y Retry-After
+  ---
+  duration_ms: 52.073286
+  ...
+# Subtest: pérdida de conexión bloquea restauración; reintento usa /me sin acceso intermedio
+ok 19 - pérdida de conexión bloquea restauración; reintento usa /me sin acceso intermedio
+  ---
+  duration_ms: 0.588805
+  ...
+# Subtest: 403 por permisos revocados bloquea y borra sesión
+ok 20 - 403 por permisos revocados bloquea y borra sesión
+  ---
+  duration_ms: 11.684793
+  ...
+# Subtest: revalidación al volver a primer plano detecta revocación
+ok 21 - revalidación al volver a primer plano detecta revocación
+  ---
+  duration_ms: 21.665806
+  ...
+# Subtest: JSON corrupto o credencial inválida se elimina sin restaurar
+ok 22 - JSON corrupto o credencial inválida se elimina sin restaurar
+  ---
+  duration_ms: 0.388574
+  ...
+# Subtest: fallo al guardar en almacenamiento seguro intenta revocar y no abre sesión
+ok 23 - fallo al guardar en almacenamiento seguro intenta revocar y no abre sesión
+  ---
+  duration_ms: 0.75816
+  ...
+# Subtest: fallo al borrar almacenamiento bloquea acceso y reintenta borrado
+ok 24 - fallo al borrar almacenamiento bloquea acceso y reintenta borrado
+  ---
+  duration_ms: 0.502656
+  ...
+# Subtest: cliente combina GET concurrentes; libera petición al terminar para reintento
+ok 25 - cliente combina GET concurrentes; libera petición al terminar para reintento
+  ---
+  duration_ms: 0.527082
+  ...
+# Subtest: cliente no combina POST con cuerpos diferentes al mismo endpoint
+ok 26 - cliente no combina POST con cuerpos diferentes al mismo endpoint
+  ---
+  duration_ms: 0.415965
+  ...
+# Subtest: rechaza configuración ausente y URL con credenciales sin exponerlas
+ok 27 - rechaza configuración ausente y URL con credenciales sin exponerlas
+  ---
+  duration_ms: 8.302641
+  ...
+# Subtest: IDs de navegación solo aceptan enteros positivos seguros
+ok 28 - IDs de navegación solo aceptan enteros positivos seguros
+  ---
+  duration_ms: 52.29213
+  ...
+# Subtest: código de autenticación no registra credenciales ni usa almacenamiento inseguro
+ok 29 - código de autenticación no registra credenciales ni usa almacenamiento inseguro
+  ---
+  duration_ms: 0.762867
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 480.487279

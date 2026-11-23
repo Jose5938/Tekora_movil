@@ -1,0 +1,535 @@
+[
+  {
+    "devOnlyRoot": false,
+    "chain": [
+      {
+        "package": "expo",
+        "version": "58.0.22",
+        "requestedRange": "^58.0.22",
+        "path": "node_modules/expo"
+      },
+      {
+        "package": "@expo/cli",
+        "version": "58.1.19",
+        "requestedRange": "^58.1.18",
+        "path": "node_modules/@expo/cli"
+      },
+      {
+        "package": "glob",
+        "version": "13.0.6",
+        "requestedRange": "^13.0.0",
+        "path": "node_modules/glob"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": false,
+    "chain": [
+      {
+        "package": "expo",
+        "version": "58.0.22",
+        "requestedRange": "^58.0.22",
+        "path": "node_modules/expo"
+      },
+      {
+        "package": "@expo/cli",
+        "version": "58.1.19",
+        "requestedRange": "^58.1.18",
+        "path": "node_modules/@expo/cli"
+      },
+      {
+        "package": "glob",
+        "version": "13.0.6",
+        "requestedRange": "^13.0.0",
+        "path": "node_modules/glob"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": false,
+    "chain": [
+      {
+        "package": "expo",
+        "version": "58.0.22",
+        "requestedRange": "^58.0.22",
+        "path": "node_modules/expo"
+      },
+      {
+        "package": "@expo/fingerprint",
+        "version": "0.21.8",
+        "requestedRange": "^0.21.8",
+        "path": "node_modules/@expo/fingerprint"
+      },
+      {
+        "package": "glob",
+        "version": "13.0.6",
+        "requestedRange": "^13.0.0",
+        "path": "node_modules/glob"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": false,
+    "chain": [
+      {
+        "package": "expo",
+        "version": "58.0.22",
+        "requestedRange": "^58.0.22",
+        "path": "node_modules/expo"
+      },
+      {
+        "package": "@expo/fingerprint",
+        "version": "0.21.8",
+        "requestedRange": "^0.21.8",
+        "path": "node_modules/@expo/fingerprint"
+      },
+      {
+        "package": "glob",
+        "version": "13.0.6",
+        "requestedRange": "^13.0.0",
+        "path": "node_modules/glob"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": false,
+    "chain": [
+      {
+        "package": "expo",
+        "version": "58.0.22",
+        "requestedRange": "^58.0.22",
+        "path": "node_modules/expo"
+      },
+      {
+        "package": "@expo/fingerprint",
+        "version": "0.21.8",
+        "requestedRange": "^0.21.8",
+        "path": "node_modules/@expo/fingerprint"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": false,
+    "chain": [
+      {
+        "package": "react-native",
+        "version": "0.88.1",
+        "requestedRange": "^0.88.1",
+        "path": "node_modules/react-native"
+      },
+      {
+        "package": "react-devtools-core",
+        "version": "6.1.5",
+        "requestedRange": "^6.1.5",
+        "path": "node_modules/react-devtools-core"
+      },
+      {
+        "package": "shell-quote",
+        "version": "1.12.0",
+        "requestedRange": "^1.6.1",
+        "path": "node_modules/shell-quote"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint",
+        "version": "9.39.5",
+        "requestedRange": "^9.39.5",
+        "path": "node_modules/eslint"
+      },
+      {
+        "package": "@eslint/config-array",
+        "version": "0.21.2",
+        "requestedRange": "^0.21.2",
+        "path": "node_modules/@eslint/config-array"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.5",
+        "path": "node_modules/@eslint/config-array/node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint",
+        "version": "9.39.5",
+        "requestedRange": "^9.39.5",
+        "path": "node_modules/eslint"
+      },
+      {
+        "package": "@eslint/eslintrc",
+        "version": "3.3.7",
+        "requestedRange": "^3.3.6",
+        "path": "node_modules/@eslint/eslintrc"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.5",
+        "path": "node_modules/@eslint/eslintrc/node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint",
+        "version": "9.39.5",
+        "requestedRange": "^9.39.5",
+        "path": "node_modules/eslint"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.5",
+        "path": "node_modules/eslint/node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "@typescript-eslint/eslint-plugin",
+        "version": "8.72.1",
+        "requestedRange": "^8.59.0",
+        "path": "node_modules/@typescript-eslint/eslint-plugin"
+      },
+      {
+        "package": "@typescript-eslint/type-utils",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/type-utils"
+      },
+      {
+        "package": "@typescript-eslint/typescript-estree",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/typescript-estree"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "@typescript-eslint/eslint-plugin",
+        "version": "8.72.1",
+        "requestedRange": "^8.59.0",
+        "path": "node_modules/@typescript-eslint/eslint-plugin"
+      },
+      {
+        "package": "@typescript-eslint/type-utils",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/type-utils"
+      },
+      {
+        "package": "@typescript-eslint/utils",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/utils"
+      },
+      {
+        "package": "@typescript-eslint/typescript-estree",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/typescript-estree"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "@typescript-eslint/eslint-plugin",
+        "version": "8.72.1",
+        "requestedRange": "^8.59.0",
+        "path": "node_modules/@typescript-eslint/eslint-plugin"
+      },
+      {
+        "package": "@typescript-eslint/utils",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/utils"
+      },
+      {
+        "package": "@typescript-eslint/typescript-estree",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/typescript-estree"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "@typescript-eslint/parser",
+        "version": "8.72.1",
+        "requestedRange": "^8.59.0",
+        "path": "node_modules/@typescript-eslint/parser"
+      },
+      {
+        "package": "@typescript-eslint/typescript-estree",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/typescript-estree"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "eslint-plugin-expo",
+        "version": "1.2.1",
+        "requestedRange": "^1.2.1",
+        "path": "node_modules/eslint-plugin-expo"
+      },
+      {
+        "package": "@typescript-eslint/utils",
+        "version": "8.72.1",
+        "requestedRange": "^8.59.0",
+        "path": "node_modules/@typescript-eslint/utils"
+      },
+      {
+        "package": "@typescript-eslint/typescript-estree",
+        "version": "8.72.1",
+        "requestedRange": "8.72.1",
+        "path": "node_modules/@typescript-eslint/typescript-estree"
+      },
+      {
+        "package": "minimatch",
+        "version": "10.2.6",
+        "requestedRange": "^10.2.2",
+        "path": "node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "eslint-plugin-expo",
+        "version": "1.2.1",
+        "requestedRange": "^1.2.1",
+        "path": "node_modules/eslint-plugin-expo"
+      },
+      {
+        "package": "eslint",
+        "version": "9.39.5",
+        "requestedRange": "^9.24.0",
+        "path": "node_modules/eslint"
+      },
+      {
+        "package": "@eslint/config-array",
+        "version": "0.21.2",
+        "requestedRange": "^0.21.2",
+        "path": "node_modules/@eslint/config-array"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.5",
+        "path": "node_modules/@eslint/config-array/node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "eslint-plugin-expo",
+        "version": "1.2.1",
+        "requestedRange": "^1.2.1",
+        "path": "node_modules/eslint-plugin-expo"
+      },
+      {
+        "package": "eslint",
+        "version": "9.39.5",
+        "requestedRange": "^9.24.0",
+        "path": "node_modules/eslint"
+      },
+      {
+        "package": "@eslint/eslintrc",
+        "version": "3.3.7",
+        "requestedRange": "^3.3.6",
+        "path": "node_modules/@eslint/eslintrc"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.5",
+        "path": "node_modules/@eslint/eslintrc/node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "eslint-plugin-expo",
+        "version": "1.2.1",
+        "requestedRange": "^1.2.1",
+        "path": "node_modules/eslint-plugin-expo"
+      },
+      {
+        "package": "eslint",
+        "version": "9.39.5",
+        "requestedRange": "^9.24.0",
+        "path": "node_modules/eslint"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.5",
+        "path": "node_modules/eslint/node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "eslint-plugin-import",
+        "version": "2.32.0",
+        "requestedRange": "^2.30.0",
+        "path": "node_modules/eslint-plugin-import"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.2",
+        "path": "node_modules/eslint-plugin-import/node_modules/minimatch"
+      }
+    ]
+  },
+  {
+    "devOnlyRoot": true,
+    "chain": [
+      {
+        "package": "eslint-config-expo",
+        "version": "58.0.4",
+        "requestedRange": "~58.0.4",
+        "path": "node_modules/eslint-config-expo"
+      },
+      {
+        "package": "eslint-plugin-react",
+        "version": "7.37.5",
+        "requestedRange": "^7.37.3",
+        "path": "node_modules/eslint-plugin-react"
+      },
+      {
+        "package": "minimatch",
+        "version": "3.1.5",
+        "requestedRange": "^3.1.2",
+        "path": "node_modules/eslint-plugin-react/node_modules/minimatch"
+      }
+    ]
+  }
+]
