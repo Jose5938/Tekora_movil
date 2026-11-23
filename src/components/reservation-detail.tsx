@@ -41,10 +41,6 @@ export function ReservationDetail({ id }: { id: number }) {
   const [notice, setNotice] = useState<string>();
   const focused = useRef(false);
   const sending = useRef(false);
-  useFocusEffect(useCallback(() => {
-    focused.current = true;
-    return () => { focused.current = false; };
-  }, []));
   const validate = useCallback((value: unknown): value is Resource<Reservation> =>
     isReservationResource(value) && value.data.id === id, [id]);
   const detail = useApiResource(`/reservations/${id}`, validate, true);
@@ -57,6 +53,14 @@ export function ReservationDetail({ id }: { id: number }) {
   const validateJourney = useCallback((value: unknown): value is Resource<ContractingJourney> =>
     isJourneyResource(value) && value.data.inquiry.id === inquiryId, [inquiryId]);
   const journey = useApiResource(inquiryId ? `${inquiryPath(inquiryId)}/journey` : null, validateJourney, true);
+  // Returning from the checkout must re-read the authoritative commit readiness.
+  useFocusEffect(useCallback(() => {
+    focused.current = true;
+    detail.retry();
+    context.retry();
+    journey.retry();
+    return () => { focused.current = false; };
+  }, [detail.retry, context.retry, journey.retry]));
   const current = journey.data?.data.reservation;
   const canCancel = !!reservation && current?.id === id && current.version === reservation.version && current.actions.includes('cancel');
   const observed = context.data?.data.reservation.version === reservation?.version ? context.data?.data : undefined;
@@ -132,6 +136,11 @@ export function ReservationDetail({ id }: { id: number }) {
       {notice && <Text accessibilityLiveRegion="polite" style={styles.text}>{notice}</Text>}
       <ReservationButton label="Actualizar reserva" disabled={busy} onPress={refresh} />
       {reservation.commercial_protocol && observed && <Text style={styles.text}>{readinessLabels[readiness?.state ?? 'unknown']}</Text>}
+      {reservation.commercial_protocol && observed?.hold?.state === 'held' && (seconds ?? 0) > 0 &&
+        readiness?.state === 'web_checkout_required' &&
+        <ReservationButton label="Elegir método de pago de prueba"
+          disabled={busy}
+          onPress={() => router.push({ pathname: '/tabs/pago', params: { id } })} />}
       {canCommit && decision !== 'cancel' && (decision === 'commit' ? <>
         <Text style={styles.text}>Confirma el horario retenido. Esta operación no realiza un cobro.</Text>
         <ReservationButton label="Confirmar contratación" disabled={busy} onPress={() => void send('commit')} />
