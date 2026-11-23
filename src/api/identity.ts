@@ -12,7 +12,12 @@ export function identityErrors(email: string, credentials?: { token: string; pas
   if (credentials) {
     const { token, password, confirmation } = credentials;
     if (!token.trim() || token.length > 4096) errors.token = ['Pega el código completo del correo.'];
-    if ([...password].length < 8 || new TextEncoder().encode(password).length > 72 || password.includes('\0')) {
+    const characters = [...password];
+    const bytes = characters.reduce((size, character) => {
+      const point = character.codePointAt(0) ?? 0;
+      return size + (point <= 0x7f ? 1 : point <= 0x7ff ? 2 : point <= 0xffff ? 3 : 4);
+    }, 0);
+    if (characters.length < 8 || bytes > 72 || password.includes('\0')) {
       errors.password = ['Usa al menos 8 caracteres y como máximo 72 bytes UTF-8.'];
     }
     if (confirmation !== password) errors.password_confirmation = ['Las contraseñas deben coincidir.'];

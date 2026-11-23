@@ -1,11 +1,11 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import type { PropsWithChildren } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export function ModuleScreen({ title, keyboard = false, action, fallback = '/tabs', children }: PropsWithChildren<{
-  title: string; keyboard?: boolean; action?: ReactNode; fallback?: '/tabs' | '/login';
+export function ModuleScreen({ title, keyboard = false, fallback = '/tabs', children }: PropsWithChildren<{
+  title: string; keyboard?: boolean; fallback?: '/tabs' | '/login';
 }>) {
   const router = useRouter();
   return <SafeAreaView style={styles.safe}>
@@ -15,7 +15,6 @@ export function ModuleScreen({ title, keyboard = false, action, fallback = '/tab
         <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
       </TouchableOpacity>
       <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-      {action}
     </View>
     <KeyboardAvoidingView style={styles.body} behavior={keyboard && Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
