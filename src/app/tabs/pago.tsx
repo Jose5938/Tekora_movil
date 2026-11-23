@@ -74,7 +74,7 @@ export default function PagoScreen() {
     isContextResource(value) && value.data.reservation.id === id &&
     value.data.client.id === user?.id, [id, user?.id]);
   const context = useApiResource(id ? '/reservations/' + id + '/checkout-context' : null, contextCheck, true);
-  const current = result ?? checkout.data?.data;
+  const current = checkout.data?.data ?? result;
   const snapshot = context.data?.data;
   const deadline = useRef<{ expires: string; at: number } | null>(null);
 
