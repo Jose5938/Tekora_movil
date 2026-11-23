@@ -14,6 +14,8 @@ export type DemoCheckout = {
   method: 'card' | 'cash' | null;
   status: DemoCheckoutStatus;
   reference: string | null;
+  attempted_at: string | null;
+  received_at: string | null;
   can_choose: boolean;
   can_confirm: boolean;
   amount: Amount | null;
@@ -35,6 +37,8 @@ export function isDemoCheckout(value: unknown): value is DemoCheckout {
     (value.method === null || value.method === 'card' || value.method === 'cash') &&
     statuses.some(status => status === value.status) &&
     (value.reference === null || typeof value.reference === 'string') &&
+    (value.attempted_at === null || (typeof value.attempted_at === 'string' && Number.isFinite(Date.parse(value.attempted_at)))) &&
+    (value.received_at === null || (typeof value.received_at === 'string' && Number.isFinite(Date.parse(value.received_at)))) &&
     typeof value.can_choose === 'boolean' && typeof value.can_confirm === 'boolean' &&
     (value.amount === null || isAmount(value.amount)) &&
     typeof value.server_now === 'string' && Number.isFinite(Date.parse(value.server_now)) &&
@@ -99,6 +103,9 @@ export function quotePaymentView(quoteId: string, checkout: DemoCheckout | null)
     if (checkout.reservation_status === 'confirmed' || checkout.reservation_status === 'completed') {
       return { label: 'Pagado (prueba)', tone: 'paid' };
     }
+    if (checkout.reservation_status === 'cancelled') {
+      return { label: 'Reserva cancelada · aprobación de prueba histórica', tone: 'warning' };
+    }
     if (checkout.reservation_status === 'held') {
       return { label: 'Tarjeta aprobada (prueba) · falta confirmar reserva', tone: 'pending' };
     }
@@ -106,10 +113,14 @@ export function quotePaymentView(quoteId: string, checkout: DemoCheckout | null)
   }
   if (checkout.method === 'cash' && checkout.selection_verified) {
     if (checkout.status === 'cash_received') {
-      return { label: 'Efectivo recibido (prueba)', tone: 'paid' };
+      return checkout.reservation_status === 'cancelled'
+        ? { label: 'Efectivo recibido (prueba) · reserva cancelada', tone: 'warning' }
+        : { label: 'Efectivo recibido (prueba)', tone: 'paid' };
     }
     if (checkout.status === 'awaiting_cash') {
-      return { label: 'Efectivo pendiente', tone: 'pending' };
+      return checkout.reservation_status === 'cancelled'
+        ? { label: 'Efectivo no recibido · reserva cancelada', tone: 'warning' }
+        : { label: 'Efectivo pendiente', tone: 'pending' };
     }
   }
   if (checkout.method === 'card' && checkout.status === 'declined') {
