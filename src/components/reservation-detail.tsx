@@ -54,13 +54,16 @@ export function ReservationDetail({ id }: { id: number }) {
     isJourneyResource(value) && value.data.inquiry.id === inquiryId, [inquiryId]);
   const journey = useApiResource(inquiryId ? `${inquiryPath(inquiryId)}/journey` : null, validateJourney, true);
   // Returning from the checkout must re-read the authoritative commit readiness.
+  const retryDetail = detail.retry;
+  const retryContext = context.retry;
+  const retryJourney = journey.retry;
   useFocusEffect(useCallback(() => {
     focused.current = true;
-    detail.retry();
-    context.retry();
-    journey.retry();
+    retryDetail();
+    retryContext();
+    retryJourney();
     return () => { focused.current = false; };
-  }, [detail.retry, context.retry, journey.retry]));
+  }, [retryDetail, retryContext, retryJourney]));
   const current = journey.data?.data.reservation;
   const canCancel = !!reservation && current?.id === id && current.version === reservation.version && current.actions.includes('cancel');
   const observed = context.data?.data.reservation.version === reservation?.version ? context.data?.data : undefined;
