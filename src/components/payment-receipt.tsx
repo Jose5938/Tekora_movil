@@ -16,13 +16,14 @@ export function PaymentReceipt({ quoteId, checkout }: {
 
   const cancelled = checkout.reservation_status === 'cancelled';
   const cashPending = checkout.method === 'cash' && checkout.status === 'awaiting_cash';
+  const toggle = `${open ? 'Ocultar' : 'Ver'} comprobante interno de prueba`;
   const date = new Date(checkout.attempted_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
 
   return <View style={styles.wrap}>
-    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }}
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={toggle} accessibilityState={{ expanded: open }}
       style={styles.trigger} onPress={() => setOpen(value => !value)}>
       <Ionicons name="receipt-outline" color="#005b9f" size={20} />
-      <Text style={styles.triggerText}>{open ? 'Ocultar' : 'Ver'} comprobante interno de prueba</Text>
+      <Text style={styles.triggerText}>{toggle}</Text>
       <Ionicons name={open ? 'chevron-up' : 'chevron-down'} color="#005b9f" size={19} />
     </TouchableOpacity>
     {open && <View style={styles.receipt}>

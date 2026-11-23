@@ -13,37 +13,38 @@ import { useApiResource } from '@/hooks/use-api-resource';
 
 export default function ReservaScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; inquiry?: string }>();
+  const params = useLocalSearchParams<{ id?: string; inquiry?: string; vista?: string }>();
   const id = resourceId(params.id);
   const inquiry = resourceId(params.inquiry);
+  const completed = params.vista === 'historial';
 
   return <SafeAreaView style={styles.safeArea}>
     <View style={styles.header}>
       <TouchableOpacity accessibilityLabel="Volver" onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs')} style={styles.iconButton}>
         <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{id ? 'Tu reserva' : inquiry ? 'Propuesta de horario' : 'Mis reservas'}</Text>
+      <Text style={styles.headerTitle}>{id ? 'Tu reserva' : inquiry ? 'Propuesta de horario' : completed ? 'Historial de servicios' : 'Mis reservas'}</Text>
       <TouchableOpacity accessibilityLabel="Ir a inicio" onPress={() => router.replace('/tabs')} style={styles.iconButton}>
         <Ionicons name="close" size={24} color="#1a1a1a" />
       </TouchableOpacity>
     </View>
     <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       {id ? <ReservationDetail key={id} id={id} /> : inquiry ? <ReservationProposal key={inquiry} inquiryId={inquiry} /> :
-        <ReservationHistory />}
+        <ReservationHistory key={completed ? 'completed' : 'all'} completed={completed} />}
     </ScrollView>
   </SafeAreaView>;
 }
 
-function ReservationHistory() {
+function ReservationHistory({ completed }: { completed: boolean }) {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const history = useApiResource(`/reservations?page=${page}`, isReservationCollection, true);
+  const history = useApiResource(`/reservations?page=${page}${completed ? '&status=completed' : ''}`, isReservationCollection, true);
   return <>
     <View style={styles.heroSection}>
       <Ionicons name="calendar" size={60} color="#90caf9" />
-      <Text style={styles.headerTitle}>Historial de reservas</Text>
+      <Text style={styles.headerTitle}>{completed ? 'Servicios completados' : 'Historial de reservas'}</Text>
     </View>
-    <ApiState {...history} empty={history.data?.data.length === 0} emptyMessage="Todavía no tienes reservas." />
+    <ApiState {...history} empty={history.data?.data.length === 0} emptyMessage={completed ? 'Todavía no tienes servicios completados.' : 'Todavía no tienes reservas.'} />
     {history.data?.data.map(item => <TouchableOpacity key={item.id} accessibilityRole="button"
       style={reservationStyles.card} onPress={() => router.push({ pathname: '/tabs/reserva', params: { id: item.id } })}>
       <Text style={reservationStyles.title}>Reserva #{item.id}</Text>

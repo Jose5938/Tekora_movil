@@ -31,5 +31,5 @@ export function useSession() {
   const controller = useContext(Context);
   if (!controller) throw new Error('SessionProvider is required');
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  return { ...state, login: controller.login, logout: controller.logout, retry: controller.restore };
+  return { ...state, login: controller.login, logout: controller.logout, retry: controller.restore, updateProfileName: controller.updateProfileName };
 }

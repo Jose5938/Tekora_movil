@@ -32,7 +32,8 @@ function Option({ title, description, icon, selected, onPress, disabled }: {
   title: string; description: string; icon: React.ComponentProps<typeof Ionicons>['name'];
   selected: boolean; onPress: () => void; disabled: boolean;
 }) {
-  return <TouchableOpacity accessibilityRole="radio" accessibilityState={{ checked: selected, disabled }}
+  return <TouchableOpacity accessibilityRole="radio" accessibilityLabel={title} accessibilityHint={description}
+    accessibilityState={{ checked: selected, disabled }}
     disabled={disabled} onPress={onPress} style={[styles.option, selected && styles.selected]}>
     <View style={styles.optionIcon}><Ionicons name={icon} size={25} color={BLUE} /></View>
     <View style={styles.grow}>

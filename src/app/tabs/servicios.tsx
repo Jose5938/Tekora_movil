@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ApiState, Pagination } from '@/components/api-state';
 import { InquiryHistory } from '@/components/inquiry-history';
 import { useApiResource } from '@/hooks/use-api-resource';
+import { catalogPath, isCategories } from '@/api/catalog';
 import { isServiceCollection, modalityLabels, type Service } from '@/api/types';
 
 
@@ -16,7 +17,9 @@ export default function ServiciosScreen() {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const services = useApiResource(`/services?page=${page}&q=${encodeURIComponent(search)}`, isServiceCollection);
+  const [category, setCategory] = useState('');
+  const services = useApiResource(tabActiva === 'catalogo' ? catalogPath('/services', page, search, category) : null, isServiceCollection);
+  const categories = useApiResource(tabActiva === 'catalogo' ? '/categories' : null, isCategories);
   const router = useRouter();
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -35,13 +38,13 @@ export default function ServiciosScreen() {
         <View style={styles.witcherBoardCard}>
           <View style={styles.boardHeader}>
             <Ionicons name="clipboard" size={24} color="#FFBA08" />
-            <Text style={styles.boardTitle}>Tablero de Solicitudes</Text>
+            <Text style={styles.boardTitle}>Publicar trabajo</Text>
           </View>
           <Text style={styles.boardDescription}>
             Para solicitar un servicio, abre su ficha en el catálogo. La publicación abierta de trabajos sigue en preparación.
           </Text>
           <TouchableOpacity style={styles.boardButton} onPress={() => router.push('/tabs/publicar')}>
-                <Text style={styles.boardButtonText}>Ver formulario en preparación</Text>
+                <Text style={styles.boardButtonText}>Consultar disponibilidad</Text>
                 <Ionicons name="arrow-forward" size={18} color="#002f5c" />
             </TouchableOpacity>
         </View>
@@ -71,6 +74,16 @@ export default function ServiciosScreen() {
               <TextInput style={styles.searchInput} accessibilityLabel="Buscar servicios" placeholder="Buscar servicios" value={query} onChangeText={setQuery} maxLength={120} returnKeyType="search" onSubmitEditing={() => { setSearch(query.trim()); setPage(1); }} />
               <TouchableOpacity accessibilityLabel="Buscar servicios" onPress={() => { setSearch(query.trim()); setPage(1); }}><Ionicons name="search-outline" size={24} color="#005b9f" /></TouchableOpacity>
             </View>
+            <ApiState {...categories} />
+            {categories.data && <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.categoryRow}>
+              {[{ id: 0, slug: '', name: 'Todas' }, ...categories.data.data].map(item => <TouchableOpacity key={item.id}
+                accessibilityRole="button" accessibilityState={{ selected: category === item.slug }}
+                style={[styles.category, category === item.slug && styles.activeCategory]}
+                onPress={() => { setCategory(item.slug); setPage(1); }}>
+                <Text style={styles.categoryText}>{item.name}</Text>
+              </TouchableOpacity>)}
+            </ScrollView>}
             <ApiState {...services} empty={services.data?.data.length === 0} />
             {services.data?.data.map(service => <ServiceCard key={service.id} service={service} onPress={() => router.push({ pathname: '/tabs/detalle-servicio', params: { id: service.id } })} />)}
             <Pagination meta={services.data?.meta} onPage={setPage} />
@@ -120,6 +133,10 @@ const ServiceCard = ({ service, onPress }: { service: Service; onPress: () => vo
 };
 
 const styles = StyleSheet.create({
+  categoryRow: { gap: 8, paddingBottom: 15 },
+  category: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: '#fff' },
+  activeCategory: { backgroundColor: '#e1f5fe' },
+  categoryText: { color: '#005b9f', fontWeight: '600' },
   searchRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, backgroundColor: '#fff', marginBottom: 16 },
   searchInput: { flex: 1, color: '#333', fontSize: 15, padding: 4 },
   safeArea: { flex: 1, backgroundColor: '#fff' },

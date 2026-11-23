@@ -31,8 +31,12 @@ export function retryDeadline(error: unknown, now = Date.now()): number {
 }
 
 type Options = { method?: 'GET' | 'POST' | 'PATCH'; body?: unknown; authenticated?: boolean };
+type PhotoMime = 'image/jpeg' | 'image/png' | 'image/webp';
+export const PROFILE_PHOTO_LIMIT = 2 * 1024 * 1024;
+export const isPhotoMime = (value: unknown): value is PhotoMime =>
+  value === 'image/jpeg' || value === 'image/png' || value === 'image/webp';
 type Transport = (url: string, init: RequestInit) => Promise<Pick<Response,
-  'ok' | 'status' | 'headers' | 'json' | 'redirected' | 'type'>>;
+  'ok' | 'status' | 'headers' | 'json' | 'arrayBuffer' | 'redirected' | 'type'>>;
 
 function isLocalHost(host: string): boolean {
   const [first, second] = host.split('.').map(Number);
@@ -83,7 +87,17 @@ export class ApiClient {
     return this.send('/auth/logout', { method: 'POST' }, token, false);
   }
 
-  private async send<T>(path: string, options: Options, token: string | null, notifyUnauthorized = true): Promise<T> {
+  readProfilePhoto(): Promise<{ mime: PhotoMime; bytes: Uint8Array }> {
+    return this.send('/me/photo', { authenticated: true, photo: true }, this.token());
+  }
+
+  uploadProfilePhoto(form: FormData): Promise<unknown> {
+    return this.send('/me/photo', { authenticated: true, method: 'POST', form }, this.token());
+  }
+
+  private async send<T>(path: string, options: Options & { photo?: boolean; form?: FormData },
+    token: string | null, notifyUnauthorized = true): Promise<T> {
+    if (options.authenticated && !token) throw new ApiError(401, 'unauthenticated', statusMessages[401]);
     let url: URL;
     try {
       const base = this.baseUrl()?.trim();
@@ -105,11 +119,11 @@ export class ApiClient {
       response = await this.transport(`${url.origin}/api/v1${path}`, {
         method: options.method ?? 'GET',
         headers: {
-          Accept: 'application/json',
+          Accept: options.photo ? 'image/jpeg, image/png, image/webp, application/json' : 'application/json',
           ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+        ...(options.form ? { body: options.form } : options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
         credentials: 'omit',
         redirect: 'error',
         cache: 'no-store',
@@ -120,7 +134,15 @@ export class ApiClient {
       }
       // Even a non-JSON 401 must invalidate the rejected credential.
       if (response.status === 401 && token && notifyUnauthorized) await this.unauthorized(token);
-      try { payload = await response.json(); } catch {
+      if (response.ok && options.photo) {
+        const mime = response.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase();
+        const declaredSize = Number(response.headers.get('Content-Length') ?? 0);
+        const invalidPhoto = new ApiError(response.status, 'invalid_photo', 'Tekora devolvió una foto no válida.');
+        if (!isPhotoMime(mime) || declaredSize > PROFILE_PHOTO_LIMIT) throw invalidPhoto;
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (!bytes.length || bytes.length > PROFILE_PHOTO_LIMIT) throw invalidPhoto;
+        payload = { mime, bytes };
+      } else try { payload = await response.json(); } catch {
         throw new ApiError(response.status,
           response.status === 503 ? 'temporarily_unavailable' : 'invalid_response',
           statusMessages[response.status] ?? 'El servidor no devolvió JSON válido.',

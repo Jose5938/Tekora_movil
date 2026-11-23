@@ -224,7 +224,17 @@ const results=[];
         return;
       }
       else if(path==='/services') body={data:mode==='empty'?[]:[service],meta:{...meta,total:mode==='empty'?0:1}};
+      else if(path==='/categories') body={data:[service.category]};
       else if(path==='/providers/7') body={data:provider};
+      else if(path==='/providers/7/services') body={data:[service],meta};
+      else if(['/providers/7/reviews','/services/21/reviews'].includes(path)) {
+        body={data:[],meta:{...meta,per_page:5,total:0,average_rating:null}};
+      }
+      else if(path==='/me/profile') {
+        assert.ok(request.headers().authorization);
+        body={data:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',age:28,gender:'Otro',
+          email_verified:true,photo_url:null}};
+      }
       else if(path==='/services/21'&&mode!=='missing') body={data:service};
       else {status=404;body=error('not_found','El recurso no existe o no está publicado.');}
       await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
@@ -240,7 +250,7 @@ const results=[];
       await visible('Te damos la bienvenida a Tekora');
     }
     await visible('Te damos la bienvenida a Tekora');
-    assert.equal(await page.getByText('Mi Perfil',{exact:true}).count(),0);
+    assert.equal(await page.getByText('Mi cuenta',{exact:true}).count(),0);
     results.push('Acceso directo privado sin sesión redirige a login sin identidad privada.');
     await page.getByRole('button',{name:'Iniciar sesión',exact:true}).click();
     await visible('Ingresa un correo electrónico válido.');
@@ -268,12 +278,13 @@ const results=[];
     await visible('Perfil del experto');
     await visible('Diagnóstico y mantenimiento.');
     assert.ok(requests.some(r=>r.path==='/providers/7'));
-    await page.getByText('Solicitar servicio',{exact:true}).click();
-    await visible('Solicita un servicio publicado');
-    await page.getByText('Abrir catálogo',{exact:true}).click();
-    results.push('Perfil obtiene /providers/7; la acción de solicitar lleva al catálogo sin enviar una petición de escritura.');
-    await visible('Soporte de computadoras');
-    await page.getByText('Soporte de computadoras',{exact:true}).click();
+    await visible('Servicios publicados');
+    await visible('Todavía no hay reseñas públicas.');
+    assert.ok(requests.some(r=>r.path==='/providers/7/services'));
+    assert.ok(requests.some(r=>r.path==='/providers/7/reviews'));
+    await page.getByRole('button',{name:/Soporte de computadoras/}).click();
+    assert.equal(inquiryPosts,0);
+    results.push('Perfil y servicios del experto permiten abrir el detalle sin crear una solicitud.');
     await visible('Detalle del servicio');
     await visible('Diagnóstico remoto.');
     assert.ok(requests.some(r=>r.path==='/services/21'));
@@ -290,6 +301,9 @@ const results=[];
     await page.getByText('Reintentar',{exact:true}).click();
     await visible('Diagnóstico remoto.');
     await page.getByLabel('Volver',{exact:true}).click();
+    await visible('Servicios publicados');
+    await page.getByRole('button',{name:'Volver',exact:true}).click();
+    await page.getByRole('tab',{name:'Servicios',exact:true}).click();
     await visible('Soporte de computadoras');
     mode='empty';
     await page.getByLabel('Actualizar catálogo',{exact:true}).click();

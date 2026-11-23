@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiState } from '@/components/api-state';
+import { PublicReviews } from '@/components/public-reviews';
 import { InquiryForm } from '@/components/inquiry-form';
 import { isAvailabilityResource } from '@/api/reservations';
 import { ReservationButton, Schedule } from '@/components/reservation-ui';
@@ -58,6 +59,7 @@ export default function DetalleServicioScreen() {
             {availability.data && <Schedule availability={availability.data.data} />}
           </View>}
           <InquiryForm key={service.id} serviceId={service.id} />
+          <PublicReviews key={`reviews-${service.id}`} path={`/services/${service.id}/reviews`} />
         </>}
       </ScrollView>
     </SafeAreaView>

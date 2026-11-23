@@ -40,6 +40,12 @@ export class SessionController {
     });
   }
 
+  updateProfileName = (owner: number, name: string) => {
+    if (this.state.status === 'authenticated' && this.state.user?.id === owner) {
+      this.update({ ...this.state, user: { ...this.state.user, name } });
+    }
+  };
+
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private update(state: SessionState) { this.state = state; this.listeners.forEach(listener => listener()); }

@@ -19,7 +19,10 @@ function SessionRoutes() {
   }
   return <Stack screenOptions={{ headerShown: false }}>
     <Stack.Screen name="index" />
-    <Stack.Protected guard={status === 'anonymous'}><Stack.Screen name="login" /></Stack.Protected>
+    <Stack.Protected guard={status === 'anonymous'}>
+      <Stack.Screen name="login" />
+      <Stack.Screen name="identidad" />
+    </Stack.Protected>
     <Stack.Protected guard={status === 'authenticated'}>
       <Stack.Screen name="tabs" />
       <Stack.Screen name="explore" />

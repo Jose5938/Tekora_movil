@@ -1,3 +1,4 @@
+import { catalogPath } from '@/api/catalog';
 import { isUnreadCount } from '@/api/communications';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity } from 'react-native';
@@ -21,7 +22,7 @@ export default function HomeScreen() {
   const notices = useApiResource('/notifications/unread-count', isUnreadCount, true);
   useFocusEffect(notices.retry);
   const unread = notices.data?.data.unread_count;
-  const providers = useApiResource(`/providers?page=${page}&q=${encodeURIComponent(search)}`, isProviderCollection);
+  const providers = useApiResource(catalogPath('/providers', page, search), isProviderCollection);
   const cerrarSesion = async () => {
     if (closing) return;
     setClosing(true);
@@ -90,8 +91,7 @@ export default function HomeScreen() {
             </View>
           </View>
           <View style={styles.bannerImagePlaceholder}>
-             <Ionicons name="image-outline" size={60} color="#99d6ea" />
-             <Text style={styles.imageHint}>IMG Refri</Text>
+             <Ionicons name="construct-outline" size={60} color="#99d6ea" />
           </View>
         </View>
 
@@ -111,7 +111,7 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>Explora Tekora</Text>
         <View style={styles.categoriesContainer}>
           <CategoryItem icon="build-outline" label="Servicios" isActive onPress={() => router.push('/tabs/servicios')} />
-          <CategoryItem icon="people-outline" label="Expertos" onPress={providers.retry} />
+          <CategoryItem icon="people-outline" label="Expertos" onPress={() => router.push('/tabs/expertos')} />
           <CategoryItem icon="chatbubble-outline" label="Mensajes" onPress={() => router.push('/tabs/chat')} />
           <CategoryItem icon="person-outline" label="Cuenta" onPress={() => router.push('/tabs/cuenta')} />
           <CategoryItem icon="clipboard-outline" label="Publicar" onPress={() => router.push('/tabs/publicar')} />
@@ -120,8 +120,8 @@ export default function HomeScreen() {
         {/* Sección de Expertos */}
         <View style={styles.expertsHeader}>
           <Text style={styles.sectionTitle}>Expertos publicados</Text>
-          <TouchableOpacity onPress={providers.retry}>
-            <Text style={styles.seeAllText}>Actualizar</Text>
+          <TouchableOpacity accessibilityRole="button" onPress={() => router.push({ pathname: '/tabs/expertos', params: { q: search } })}>
+            <Text style={styles.seeAllText}>Ver todos</Text>
           </TouchableOpacity>
         </View>
 
@@ -137,7 +137,7 @@ export default function HomeScreen() {
 }
 
 const CategoryItem = ({ icon, label, isActive = false, onPress }: { icon: React.ComponentProps<typeof Ionicons>['name'], label: string, isActive?: boolean, onPress: () => void }) => (
-  <TouchableOpacity style={styles.categoryItem} onPress={onPress}>
+  <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} style={styles.categoryItem} onPress={onPress}>
     <View style={[styles.categoryIconContainer, isActive && styles.categoryIconActive]}>
       <Ionicons name={icon} size={28} color={isActive ? "#fff" : "#005b9f"} />
     </View>
@@ -196,7 +196,6 @@ const styles = StyleSheet.create({
   bannerBadge: { flexDirection: 'row', alignItems: 'center' },
   bannerBadgeText: { color: '#005b9f', fontSize: 12, marginLeft: 4, fontWeight: '600' },
   bannerImagePlaceholder: { position: 'absolute', right: -20, bottom: -10, width: 140, height: 140, backgroundColor: '#b3e5fc', borderRadius: 70, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
-  imageHint: { fontSize: 10, color: '#005b9f', fontWeight: 'bold', marginTop: 4 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 16 },
   categoriesContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 },
   categoryItem: { alignItems: 'center' },

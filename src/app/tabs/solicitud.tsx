@@ -74,7 +74,11 @@ export default function SolicitudScreen() {
 }
 
 function JourneyDetails({ journey }: { journey: ContractingJourney }) {
+  const router = useRouter();
   const { next_action: action, progress, history } = journey;
+  const reference = resourceId(String(action.reference.id));
+  const canWriteReview = action.code === 'write_review' && action.reference.type === 'reservation';
+  const canViewReview = action.code === 'view_review' && action.reference.type === 'review';
   const readiness = readReadiness(journey.confirmation_readiness);
   return <>
     <View style={styles.card}>
@@ -82,7 +86,11 @@ function JourneyDetails({ journey }: { journey: ContractingJourney }) {
       <Text style={styles.action}>{action.label}</Text>
       <Text style={styles.body}>{action.description}</Text>
       {journey.reservation && <Text style={styles.meta}>{readinessLabels[readiness?.state ?? 'unknown']}</Text>}
-      {action.interaction === 'navigate' && !['read_history', 'issue_quote', 'review_quote', 'propose_schedule', 'confirm_reservation'].includes(action.code) &&
+      {action.mobile_execution_available && reference && (canWriteReview || canViewReview) &&
+        <ReservationButton label={canWriteReview ? 'Escribir reseña' : 'Ver mi reseña'} onPress={() => router.push({
+          pathname: '/tabs/resenas', params: canWriteReview ? { reserva: reference } : { id: reference },
+        })} />}
+      {action.interaction === 'navigate' && !['read_history', 'issue_quote', 'review_quote', 'propose_schedule', 'confirm_reservation', 'write_review', 'view_review'].includes(action.code) &&
         <Text style={styles.meta}>{action.mobile_execution_available ? 'Esta acción aún no está integrada en la app.' : 'Esta acción solo está disponible fuera de la app.'}</Text>}
     </View>
     <View style={styles.card}>

@@ -22,6 +22,10 @@
     "../src/api/confirmation.ts",
     "../src/api/communications.ts",
     "../src/auth/session.ts",
-    "../src/api/demo-checkout.ts"
+    "../src/api/demo-checkout.ts",
+    "../src/api/catalog.ts",
+    "../src/api/identity.ts",
+    "../src/api/profile.ts",
+    "../src/api/reviews.ts"
   ]
 }

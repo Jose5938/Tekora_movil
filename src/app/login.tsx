@@ -1,11 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSession } from '@/auth/context';
 import { ApiError, errorMessage, type FieldErrors } from '@/api/http';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const { login, message } = useSession();
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -41,7 +43,7 @@ export default function LoginScreen() {
         style={styles.keyboardContainer} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           
           {/* Logo y Bienvenida */}
           <View style={styles.headerContainer}>
@@ -101,7 +103,8 @@ export default function LoginScreen() {
             {!!fields.password && <Text style={styles.error}>{fields.password.join(' ')}</Text>}
             {!!fields.device_name && <Text style={styles.error}>{fields.device_name.join(' ')}</Text>}
 
-            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.forgotPassword, styles.disabled]}>
+            <TouchableOpacity accessibilityRole="button" disabled={loading} style={styles.forgotPassword}
+              onPress={() => router.push({ pathname: '/identidad', params: { modo: 'recuperar' } })}>
               <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
 
@@ -110,34 +113,14 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Separador */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>O continúa con</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Botones Sociales */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.socialButton, styles.disabled]}>
-              <Ionicons name="logo-google" size={24} color="#DB4437" />
-              <Text style={styles.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={[styles.socialButton, styles.disabled]}>
-              <Ionicons name="logo-apple" size={24} color="#000" />
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Registro */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>¿No tienes una cuenta? </Text>
-            <TouchableOpacity accessibilityRole="button" disabled accessibilityState={{ disabled: true }} style={styles.disabled}>
+            <TouchableOpacity accessibilityRole="button" disabled={loading}
+              onPress={() => router.push({ pathname: '/identidad', params: { modo: 'registro' } })}>
               <Text style={styles.footerLink}>Regístrate</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.notice}>Google, Apple, registro y recuperación de contraseña están en preparación. Usa una cuenta de solicitante existente.</Text>
           {Platform.OS === 'web' && <Text style={styles.notice}>Vista web: la sesión se conserva solo mientras esta página permanezca abierta.</Text>}
 
         </ScrollView>
@@ -152,7 +135,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   keyboardContainer: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40, flexGrow: 1, justifyContent: 'center' },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40, flexGrow: 1, width: '100%', maxWidth: 560, alignSelf: 'center', justifyContent: 'center' },
   
   headerContainer: { alignItems: 'center', marginBottom: 40 },
   logoIcon: { width: 64, height: 64, borderRadius: 16, backgroundColor: '#005b9f', justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
@@ -172,13 +155,7 @@ const styles = StyleSheet.create({
   primaryButton: { backgroundColor: '#005b9f', borderRadius: 14, height: 56, justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#005b9f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 30 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#eee' },
-  dividerText: { marginHorizontal: 16, fontSize: 13, color: '#888', fontWeight: '500' },
   
-  socialContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, marginBottom: 40 },
-  socialButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e4ebf1', borderRadius: 14, height: 56, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
-  socialButtonText: { fontSize: 15, fontWeight: '600', color: '#333', marginLeft: 10 },
   
   footerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 'auto' },
   footerText: { fontSize: 14, color: '#666' },
