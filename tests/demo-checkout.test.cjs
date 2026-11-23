@@ -16,7 +16,9 @@ const base = {
   remaining_seconds: 900, synthetic_only: true,
 };
 function client(transport) {
-  const api = new ApiClient(() => 'https://api.example.test/api/v1', transport);
+  const api = new ApiClient(() => 'http://127.0.0.1:8097/api/v1', transport, {
+    allowLocalHttp: true, allowLocalDemoCheckout: true,
+  });
   api.setSessionHandlers(() => 'synthetic-client-token', async () => {});
   return api;
 }
@@ -87,4 +89,43 @@ test('Cotizaciones distingue efectivo pendiente de dinero recibido y rechazos', 
     selection_verified: false })?.tone, 'warning');
   assert.equal(quotePaymentView(quoteId, { ...cash, method: 'card', status: 'temporary_failure',
     selection_verified: false })?.tone, 'warning');
+});
+
+test('el checkout B3.2 solo usa loopback, desarrollo habilitado y un transporte válido', async () => {
+  const policy = { allowLocalHttp: true, allowLocalDemoCheckout: true };
+  const path = '/reservations/17/demo-checkout';
+  for (const [url, settings, code] of [
+    ['https://staging.example.test/api/v1', policy, 'demo_checkout_disabled'],
+    ['https://localhost.example.test/api/v1', policy, 'demo_checkout_disabled'],
+    ['http://10.0.2.2:8097/api/v1', policy, 'demo_checkout_disabled'],
+    ['http://192.168.1.20:8097/api/v1', policy, 'demo_checkout_disabled'],
+    ['https://127.0.0.1/api/v1', {}, 'demo_checkout_disabled'],
+    ['http://127.0.0.1:8097/api/v1', { allowLocalHttp: true }, 'demo_checkout_disabled'],
+    ['http://127.0.0.1:8097/api/v1', { allowLocalDemoCheckout: true }, 'insecure_transport'],
+  ]) {
+    const api = new ApiClient(() => url, async () => assert.fail('se invocó el transporte'), settings);
+    api.setSessionHandlers(() => 'synthetic-client-token', async () => {});
+    assert.equal(api.localDemoCheckoutEnabled, false);
+    await assert.rejects(api.request(path, { authenticated: true }), { code });
+    await assert.rejects(submitDemoCheckout(api, 17, { method: 'cash' }, key), { code });
+  }
+  for (const host of ['127.0.0.1', 'localhost', '[::1]']) {
+    const endpoint = `http://${host}:8097/api/v1`;
+    const api = new ApiClient(() => endpoint, async (url, init) => {
+      assert.equal(url, endpoint + path);
+      assert.equal(init.headers.Authorization, 'Bearer synthetic-client-token');
+      return Response.json({ data: base });
+    }, policy);
+    api.setSessionHandlers(() => 'synthetic-client-token', async () => {});
+    assert.equal(api.localDemoCheckoutEnabled, true);
+    assert.ok(isDemoCheckoutResource(await api.request(path, { authenticated: true })));
+  }
+});
+
+test('una ruta de checkout con query o segmento codificado se bloquea antes de fetch', async () => {
+  const api = new ApiClient(() => 'https://staging.example.test/api/v1', async () => assert.fail('se invocó el transporte'));
+  api.setSessionHandlers(() => 'synthetic-client-token', async () => {});
+  for (const path of ['/reservations/17/demo-checkout?source=test', '/reservations/17/%64emo-checkout/']) {
+    await assert.rejects(api.request(path, { authenticated: true }), { code: 'demo_checkout_disabled' });
+  }
 });

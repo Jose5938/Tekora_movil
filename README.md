@@ -1,3 +1,5 @@
+> Staging HTTPS y pruebas en Android: [configuración, contratos y aceptación](docs/STAGING-HTTPS-ANDROID.md).
+
 > Integración móvil Etapa 10A: [ejecución Windows/LAN y alcance](docs/ETAPA-10A.md), [validación y pendientes](docs/VALIDACION-10A.md).
 
 # Welcome to your Expo app 👋

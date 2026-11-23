@@ -38,9 +38,13 @@ export const isPhotoMime = (value: unknown): value is PhotoMime =>
 type Transport = (url: string, init: RequestInit) => Promise<Pick<Response,
   'ok' | 'status' | 'headers' | 'json' | 'arrayBuffer' | 'redirected' | 'type'>>;
 
+function isLoopback(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+}
+
 function isLocalHost(host: string): boolean {
   const [first, second] = host.split('.').map(Number);
-  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' ||
+  return isLoopback(host) ||
     (/^\d+\.\d+\.\d+\.\d+$/.test(host) &&
       (first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168)));
 }
@@ -53,7 +57,7 @@ export class ApiClient {
   constructor(
     private baseUrl: () => string | undefined,
     private transport: Transport = (input, init) => fetch(input, init),
-    private allowLocalHttp = false,
+    private policy: { allowLocalHttp?: boolean; allowLocalDemoCheckout?: boolean } = {},
   ) {}
 
   setSessionHandlers(token: () => string | null, unauthorized: (token: string) => Promise<void>) {
@@ -95,20 +99,48 @@ export class ApiClient {
     return this.send('/me/photo', { authenticated: true, method: 'POST', form }, this.token());
   }
 
-  private async send<T>(path: string, options: Options & { photo?: boolean; form?: FormData },
-    token: string | null, notifyUnauthorized = true): Promise<T> {
-    if (options.authenticated && !token) throw new ApiError(401, 'unauthenticated', statusMessages[401]);
+  get localDemoCheckoutEnabled(): boolean {
+    if (!this.policy.allowLocalDemoCheckout) return false;
+    try {
+      return isLoopback(this.resolveBase().hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  private resolveBase(): URL {
     let url: URL;
     try {
       const base = this.baseUrl()?.trim();
-      if (!base || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) throw new Error();
+      if (!base) throw new Error();
       url = new URL(base);
       if (url.pathname.replace(/\/+$/, '') !== '/api/v1' || url.username || url.password || url.search || url.hash) throw new Error();
     } catch {
-      throw new ApiError(0, 'configuration', 'Configura EXPO_PUBLIC_API_BASE_URL con la URL de Tekora terminada en /api/v1.');
+      throw new ApiError(0, 'configuration', 'Configura EXPO_PUBLIC_API_BASE_URL con la URL HTTPS de Tekora terminada en /api/v1.');
     }
-    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && this.allowLocalHttp && isLocalHost(url.hostname))) {
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && this.policy.allowLocalHttp && isLocalHost(url.hostname))) {
       throw new ApiError(0, 'insecure_transport', 'Conéctate a Tekora por HTTPS. HTTP solo está permitido en desarrollo con un servidor local autorizado.');
+    }
+    return url;
+  }
+
+  private async send<T>(path: string, options: Options & { photo?: boolean; form?: FormData },
+    token: string | null, notifyUnauthorized = true): Promise<T> {
+    if (options.authenticated && !token) throw new ApiError(401, 'unauthenticated', statusMessages[401]);
+    const base = this.resolveBase();
+    const invalidPath = new ApiError(0, 'configuration', 'La ruta solicitada no pertenece a la API de Tekora.');
+    if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) throw invalidPath;
+    const target = new URL('/api/v1' + path, base.origin);
+    let pathname: string;
+    try {
+      pathname = decodeURIComponent(target.pathname);
+    } catch {
+      throw invalidPath;
+    }
+    if (!pathname.startsWith('/api/v1/') || target.hash) throw invalidPath;
+    if (pathname.split('/').includes('demo-checkout') &&
+      (!this.policy.allowLocalDemoCheckout || !isLoopback(base.hostname))) {
+      throw new ApiError(0, 'demo_checkout_disabled', 'El checkout de prueba solo está disponible en el laboratorio local B3.2.');
     }
 
     const controller = new AbortController();
@@ -116,7 +148,7 @@ export class ApiClient {
     let response: Awaited<ReturnType<Transport>>;
     let payload: unknown;
     try {
-      response = await this.transport(`${url.origin}/api/v1${path}`, {
+      response = await this.transport(target.href, {
         method: options.method ?? 'GET',
         headers: {
           Accept: options.photo ? 'image/jpeg, image/png, image/webp, application/json' : 'application/json',

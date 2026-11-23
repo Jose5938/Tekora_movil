@@ -12,6 +12,8 @@ import { mxn } from '@/api/quotes';
 import { isContextResource, observedHoldSeconds } from '@/api/reservations';
 import { resourceId } from '@/api/types';
 import { useSession } from '@/auth/context';
+import { ModuleScreen } from '@/components/module-screen';
+import { ReservationButton, reservationStyles } from '@/components/reservation-ui';
 import { ApiState } from '@/components/api-state';
 import { useApiResource } from '@/hooks/use-api-resource';
 
@@ -59,6 +61,19 @@ export default function PagoScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const id = resourceId(params.id);
+  if (!api.localDemoCheckoutEnabled) {
+    return <ModuleScreen title="Checkout de prueba no disponible">
+      <Text style={reservationStyles.text}>La demostración de pago está reservada para el laboratorio local B3.2.</Text>
+      <ReservationButton label="Volver a la reserva" onPress={() => router.replace({
+        pathname: '/tabs/reserva', params: id ? { id } : {},
+      })} />
+    </ModuleScreen>;
+  }
+  return <LocalDemoCheckout key={id ?? 'missing'} id={id} />;
+}
+
+function LocalDemoCheckout({ id }: { id: number | null }) {
+  const router = useRouter();
   const { user } = useSession();
   const [method, setMethod] = useState<'card' | 'cash' | null>(null);
   const [scenario, setScenario] = useState<Scenario>('approved');

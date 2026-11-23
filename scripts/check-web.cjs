@@ -32,6 +32,9 @@ let reservationStatus=null, proposals=0, cancellations=0, readinessState='web_ch
 const commitKeys=[];
 const proposalKeys=[];
 let messagesRead=false, messageSent=false, noticeRead=false;
+let photoUploaded=false;
+const identityWrites=[];
+const fixturePhoto=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jG5sAAAAASUVORK5CYII=','base64');
 const messageKeys=[];
 const requests=[];
 const results=[];
@@ -44,6 +47,10 @@ const results=[];
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
     page=await context.newPage();
     page.on('pageerror',error=>errors.push(error.message));
+    const demoRequests=[];
+    page.on('request',request=>{
+      if(new URL(request.url()).pathname.endsWith('/demo-checkout')) demoRequests.push(request.method());
+    });
     let redirectRequests = 0;
     await page.route('http://127.0.0.1:18013/downgraded', async route => {
       redirectRequests++;
@@ -71,6 +78,23 @@ const results=[];
         else if(input.password==='validation') {status=422;body=error('validation_failed','Revisa los datos.',{email:['Correo rechazado por el servidor.']});}
         else if(input.password==='limited') {status=429;body=error('too_many_requests','Demasiados intentos. Espera antes de reintentar.');}
         else body={data:{token_type:'Bearer',access_token:'synthetic-browser-token',expires_at:new Date(Date.now()+(input.password==='short-session'?3000:3600000)).toISOString(),user:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',experience:'client',permissions:['client.appointments.view','client.inquiries.manage']}}};
+      } else if(['/auth/register','/auth/register/confirm','/auth/forgot-password','/auth/reset-password'].includes(path)) {
+        assert.equal(request.method(),'POST');
+        assert.equal(request.headers().authorization,undefined);
+        const input=request.postDataJSON();
+        const confirmation=path==='/auth/register/confirm'||path==='/auth/reset-password';
+        const fields=['email',...(confirmation?['token','password','password_confirmation']:[]),
+          ...(path==='/auth/register/confirm'?['name','gender','age']:[])];
+        assert.deepEqual(Object.keys(input).sort(),fields.sort());
+        assert.equal(input.email,'identidad@example.test');
+        if(confirmation) {
+          assert.equal(input.token,'codigo-sintetico');
+          assert.equal(input.password,input.password_confirmation);
+        }
+        if(path==='/auth/register/confirm') assert.equal(input.age,28);
+        identityWrites.push(path);
+        status=path==='/auth/reset-password'?200:202;
+        body={data:{message:confirmation?'Operación de prueba completada.':'Si corresponde, recibirás un correo.'}};
       } else if(path==='/auth/logout') {logouts++;body={data:{revoked:true}};}
       else if(path==='/me') body={data:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',experience:'client',permissions:['client.appointments.view','client.inquiries.manage']}};
       else if(path==='/services/21/inquiries') {
@@ -230,10 +254,20 @@ const results=[];
       else if(['/providers/7/reviews','/services/21/reviews'].includes(path)) {
         body={data:[],meta:{...meta,per_page:5,total:0,average_rating:null}};
       }
-      else if(path==='/me/profile') {
-        assert.ok(request.headers().authorization);
+      else if(path==='/me/profile'||path==='/me/photo') {
+        assert.equal(request.headers().authorization,'Bearer synthetic-browser-token');
+        if(path==='/me/photo'&&request.method()==='GET') {
+          assert.equal(photoUploaded,true);
+          await route.fulfill({status:200,contentType:'image/png',body:fixturePhoto});
+          return;
+        }
+        if(path==='/me/photo') {
+          assert.equal(request.method(),'POST');
+          assert.match(request.headers()['content-type'],/^multipart\/form-data; boundary=/);
+          photoUploaded=true;
+        }
         body={data:{id:4,name:'Solicitante de prueba',email:'cliente@example.test',age:28,gender:'Otro',
-          email_verified:true,photo_url:null}};
+          email_verified:true,photo_url:photoUploaded?'/api/v1/me/photo':null}};
       }
       else if(path==='/services/21'&&mode!=='missing') body={data:service};
       else {status=404;body=error('not_found','El recurso no existe o no está publicado.');}
@@ -426,6 +460,7 @@ const results=[];
     await visible('El plazo original es de 900 segundos. Volver a consultar no lo amplía.');
     await visible('Esta reserva requiere un paso fuera de la app.');
     assert.equal(await page.getByRole('button',{name:'Revisar confirmación',exact:true}).count(),0);
+    assert.equal(await page.getByRole('button',{name:'Elegir método de pago de prueba',exact:true}).count(),0);
     assert.equal(commitKeys.length,0);
     readinessState='ready';
     await page.getByRole('button',{name:'Actualizar reserva',exact:true}).click();
@@ -496,6 +531,16 @@ const results=[];
     await page.getByText('Mi cuenta',{exact:true}).click();
     results.push('Notificaciones: contador real, marcado por identificador compuesto y navegación al recurso propio.');
     await visible('cliente@example.test');
+    const [chooser]=await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.getByRole('button',{name:'Cambiar foto',exact:true}).click(),
+    ]);
+    await chooser.setFiles({name:'perfil-sintetico.png',mimeType:'image/png',buffer:fixturePhoto});
+    await visible('Foto de perfil guardada.');
+    await page.getByLabel('Foto de perfil',{exact:true}).waitFor({state:'visible'});
+    assert.ok(requests.some(r=>r.path==='/me/photo'&&r.method==='POST'&&r.hasBearer));
+    assert.ok(requests.some(r=>r.path==='/me/photo'&&r.method==='GET'&&r.hasBearer));
+    results.push('Foto propia por multipart y descarga binaria con Bearer en la API HTTPS simulada.');
     await page.screenshot({path:join(evidence,'cuenta.png'),fullPage:true});
     await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
     await visible('Te damos la bienvenida a Tekora');
@@ -524,6 +569,27 @@ const results=[];
     await page.screenshot({path:join(evidence,'seguimiento-320.png'),fullPage:true});
     results.push('Inicio enlaza al historial, con navegación accesible y sin desbordamiento horizontal a 320 px.');
 
+    for (const [link,submit] of [['Regístrate','Crear mi cuenta'],['¿Olvidaste tu contraseña?','Cambiar contraseña']]) {
+      await page.goto('http://127.0.0.1:18080/login');
+      await page.getByRole('button',{name:link,exact:true}).click();
+      await page.locator('input[aria-label="Correo electrónico"]:not([placeholder="ejemplo@correo.com"])').fill('identidad@example.test');
+      await page.getByRole('button',{name:'Solicitar código',exact:true}).click();
+      await visible('Pega el código completo que recibiste por correo.');
+      await page.getByLabel('Código del correo',{exact:true}).fill('codigo-sintetico');
+      if(submit==='Crear mi cuenta') {
+        await page.getByLabel('Nombre',{exact:true}).fill('Cliente sintético');
+        await page.getByLabel('Edad',{exact:true}).fill('28');
+        await page.getByRole('radio',{name:'Otro',exact:true}).click();
+      }
+      await page.getByLabel('Nueva contraseña',{exact:true}).fill('clave-sintetica');
+      await page.getByLabel('Confirmar contraseña',{exact:true}).fill('clave-sintetica');
+      await page.getByRole('button',{name:submit,exact:true}).click();
+      await visible('Operación de prueba completada.');
+    }
+    assert.deepEqual(identityWrites,['/auth/register','/auth/register/confirm','/auth/forgot-password','/auth/reset-password']);
+    results.push('Registro y recuperación envían los contratos actuales por HTTPS sin Bearer.');
+    assert.deepEqual(demoRequests,[]);
+    results.push('Reservas y cotizaciones de distribución no invocan demo-checkout ni ofrecen iniciar pagos de prueba.');
     assert.ok(requests.filter(r=>r.method==='GET'&&(r.path.startsWith('/services')||r.path.startsWith('/providers'))).every(r=>!r.hasBearer));
     assert.deepEqual(errors,[]);
     writeFileSync(join(evidence,'results.json'),JSON.stringify({results,requests,consolePageErrors:errors},null,2));

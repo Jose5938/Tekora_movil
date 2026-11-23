@@ -40,7 +40,8 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
   [selected, inquiryId, account]);
   const history = useApiResource(`${quotesPath(inquiryId)}?page=${page}`, validateList, true);
   const detail = useApiResource(selected ? quotePath(selected) : null, validateDetail, true);
-  const reservationId = journey?.commercial.mode === 'quoted' ? journey.reservation?.id : undefined;
+  const reservationId = api.localDemoCheckoutEnabled && journey?.commercial.mode === 'quoted'
+    ? journey.reservation?.id : undefined;
   const validatePayment = useCallback((value: unknown): value is Resource<DemoCheckout> =>
     isDemoCheckoutResource(value) && value.data.reservation_id === reservationId, [reservationId]);
   const payment = useApiResource(reservationId ? demoCheckoutPath(reservationId) : null, validatePayment, true);
@@ -51,7 +52,7 @@ export function InquiryQuotes({ inquiryId, journey, refreshJourney }: {
   const visited = useRef(false);
   useFocusEffect(useCallback(() => {
     focused.current = true;
-    if (visited.current) latestPaymentRetry.current();
+    if (api.localDemoCheckoutEnabled && visited.current) latestPaymentRetry.current();
     visited.current = true;
     return () => { focused.current = false; };
   }, []));

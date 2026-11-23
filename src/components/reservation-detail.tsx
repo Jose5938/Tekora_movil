@@ -147,7 +147,7 @@ export function ReservationDetail({ id }: { id: number }) {
       {notice && <Text accessibilityLiveRegion="polite" style={styles.text}>{notice}</Text>}
       <ReservationButton label="Actualizar reserva" disabled={busy} onPress={refresh} />
       {reservation.commercial_protocol && observed && <Text style={styles.text}>{readinessLabels[readiness?.state ?? 'unknown']}</Text>}
-      {reservation.commercial_protocol && observed?.hold?.state === 'held' && (seconds ?? 0) > 0 &&
+      {api.localDemoCheckoutEnabled && reservation.commercial_protocol && observed?.hold?.state === 'held' && (seconds ?? 0) > 0 &&
         readiness?.state === 'web_checkout_required' &&
         <ReservationButton label="Elegir método de pago de prueba"
           disabled={busy}
