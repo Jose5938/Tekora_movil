@@ -1,0 +1,31 @@
+name: M3.1 mobile checkout validation
+
+on:
+  push:
+    branches:
+      - codex/m31-tekora-mobile-checkout-ui
+
+permissions:
+  contents: read
+
+jobs:
+  mobile:
+    name: TypeScript / unit tests / Expo lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: API unit tests
+        run: npm test
+      - name: Expo lint
+        run: npx expo lint
