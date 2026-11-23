@@ -4,11 +4,24 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "ignoreDeprecations": "6.0",
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "types": [],
     "strict": true,
     "skipLibCheck": true,
     "rootDir": "../src"
   },
-  "include": ["../src/api/http.ts", "../src/api/types.ts", "../src/api/inquiries.ts", "../src/api/quotes.ts", "../src/api/reservations.ts", "../src/api/confirmation.ts", "../src/api/communications.ts", "../src/auth/session.ts"]
+  "include": [
+    "../src/api/http.ts",
+    "../src/api/types.ts",
+    "../src/api/inquiries.ts",
+    "../src/api/quotes.ts",
+    "../src/api/reservations.ts",
+    "../src/api/confirmation.ts",
+    "../src/api/communications.ts",
+    "../src/auth/session.ts",
+    "../src/api/demo-checkout.ts"
+  ]
 }
