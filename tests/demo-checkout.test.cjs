@@ -16,7 +16,9 @@ const base = {
   remaining_seconds: 900, synthetic_only: true,
 };
 function client(transport) {
-  const api = new ApiClient(() => 'https://api.example.test/api/v1', transport);
+  const api = new ApiClient(() => 'http://127.0.0.1:8097/api/v1', transport, {
+    allowLocalHttp: true, allowLocalDemoCheckout: true,
+  });
   api.setSessionHandlers(() => 'synthetic-client-token', async () => {});
   return api;
 }

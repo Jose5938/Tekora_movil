@@ -15,6 +15,7 @@ import {
   isDemoCheckoutResource,
   quotePaymentView,
   type DemoCheckout,
+  type CheckoutDisplay,
 } from '@/api/demo-checkout';
 import type { ContractingJourney } from '@/api/inquiries';
 import { finishQuoteIntent, quoteIntent } from '@/api/quote-intent';
@@ -30,6 +31,10 @@ import {
   type CommercialQuote,
 } from '@/api/quotes';
 import type { Collection, Resource } from '@/api/types';
+import { readReadiness } from '@/api/confirmation';
+import {
+  integratedCheckoutDisplay, integratedCheckoutPath, isIntegratedCheckoutResource, type IntegratedCheckout,
+} from '@/api/integrated-checkout';
 import { useSession } from '@/auth/context';
 import { ApiState, Pagination } from '@/components/api-state';
 import { PaymentReceipt } from '@/components/payment-receipt';
@@ -108,23 +113,23 @@ export function InquiryQuotes({
     true
   );
 
-  const reservationId =
-    journey?.commercial.mode === 'quoted'
-      ? journey.reservation?.id
-      : undefined;
+  const reservation = journey?.commercial.mode === 'quoted' ? journey.reservation : null;
+  const reservationId = reservation?.id;
+  const readiness = readReadiness(journey?.confirmation_readiness);
+  const integrated = readiness?.simulated_checkout_required === true && readiness.reservation_id === reservationId;
+  const paymentPath = reservationId && (integrated || api.localDemoCheckoutEnabled)
+    ? integrated ? integratedCheckoutPath(reservationId) : demoCheckoutPath(reservationId)
+    : null;
 
   const validatePayment = useCallback(
-    (value: unknown): value is Resource<DemoCheckout> =>
-      isDemoCheckoutResource(value) &&
-      value.data.reservation_id === reservationId,
-    [reservationId]
+    (value: unknown): value is Resource<DemoCheckout | IntegratedCheckout> =>
+      integrated
+        ? isIntegratedCheckoutResource(value) && value.data.reservation_id === reservationId
+        : isDemoCheckoutResource(value) && value.data.reservation_id === reservationId,
+    [integrated, reservationId]
   );
 
-  const payment = useApiResource(
-    reservationId ? demoCheckoutPath(reservationId) : null,
-    validatePayment,
-    true
-  );
+  const payment = useApiResource(paymentPath, validatePayment, true);
 
   // Actualización original al regresar de una reserva.
   const latestPaymentRetry = useRef(payment.retry);
@@ -151,7 +156,13 @@ export function InquiryQuotes({
     }, [])
   );
 
-  const currentPayment = payment.data?.data ?? null;
+  const paymentData = payment.data?.data;
+  const agreement = journey?.commercial;
+  const currentPayment = paymentData && 'attempt' in paymentData
+    ? reservation && agreement?.quote && agreement.agreed_amount
+      ? integratedCheckoutDisplay(paymentData, reservation.status, agreement.quote.id, agreement.agreed_amount)
+      : null
+    : paymentData ?? null;
   const quote = detail.data?.data;
   const action = journey?.next_action;
   const commercial = journey?.commercial;
@@ -539,7 +550,7 @@ function PaymentBadge({
   checkout,
 }: {
   quoteId: string;
-  checkout: DemoCheckout | null;
+  checkout: CheckoutDisplay | null;
 }) {
   const styles = useQuoteStyles();
 

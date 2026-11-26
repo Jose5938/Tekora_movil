@@ -32,9 +32,15 @@ import {
   isDemoCheckoutResource,
   submitDemoCheckout,
   type DemoCheckout,
-  type DemoChoice,
 } from '@/api/demo-checkout';
-import { ApiError, errorMessage } from '@/api/http';
+import { ApiError, errorMessage, retryDeadline } from '@/api/http';
+import {
+  integratedCheckoutDisplay,
+  integratedCheckoutPath,
+  isIntegratedCheckoutResource,
+  submitIntegratedCheckout,
+  type IntegratedCheckout,
+} from '@/api/integrated-checkout';
 import { mxn } from '@/api/quotes';
 import {
   isContextResource,
@@ -55,7 +61,7 @@ function presentCheckoutLabel(
   status: DemoCheckout['status']
 ) {
   if (status === 'test_approved') {
-    return 'Tarjeta autorizada';
+    return 'Tarjeta de prueba autorizada';
   }
 
   if (status === 'awaiting_cash') {
@@ -184,33 +190,9 @@ export default function PagoScreen() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
 
-  const [result, setResult] =
-    useState<DemoCheckout | null>(null);
-
   const [seconds, setSeconds] = useState(0);
   const sending = useRef(false);
-
-  // Campos de demostración.
-  // No se envían al backend.
-  const [cardName, setCardName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-
-  const check = useCallback(
-    (
-      value: unknown
-    ): value is { data: DemoCheckout } =>
-      isDemoCheckoutResource(value) &&
-      value.data.reservation_id === id,
-    [id]
-  );
-
-  const checkout = useApiResource(
-    id ? demoCheckoutPath(id) : null,
-    check,
-    true
-  );
+  const retryAt = useRef(0);
 
   const contextCheck = useCallback(
     (
@@ -232,14 +214,33 @@ export default function PagoScreen() {
     true
   );
 
-  const current = checkout.data?.data ?? result;
   const snapshot = context.data?.data;
-
-  // Se conserva el control de retención.
-  const deadline = useRef<{
-    expires: string;
-    at: number;
-  } | null>(null);
+  const simulated = snapshot?.simulated_checkout;
+  const mode = simulated
+    ? 'integrated'
+    : snapshot && api.localDemoCheckoutEnabled ? 'local' : null;
+  const expected = snapshot?.amount;
+  const quoteId = snapshot?.quote?.id;
+  const checkoutCheck = useCallback(
+    (value: unknown): value is { data: IntegratedCheckout | DemoCheckout } => {
+      if (mode === 'integrated') {
+        return isIntegratedCheckoutResource(value) && value.data.reservation_id === id &&
+          !!expected && !!quoteId && !!integratedCheckoutDisplay(value.data, 'held', quoteId, expected);
+      }
+      return mode === 'local' && isDemoCheckoutResource(value) && value.data.reservation_id === id;
+    },
+    [id, mode, expected, quoteId]
+  );
+  const checkout = useApiResource(id && mode
+    ? mode === 'integrated' ? integratedCheckoutPath(id) : demoCheckoutPath(id)
+    : null, checkoutCheck, true);
+  const checkoutData = checkout.data?.data;
+  const current = checkoutData && 'attempt' in checkoutData
+    ? snapshot && expected && quoteId
+      ? integratedCheckoutDisplay(checkoutData, snapshot.reservation.status, quoteId, expected)
+      : null
+    : checkoutData;
+  const deadline = useRef<{ expires: number; at: number } | null>(null);
 
   useEffect(() => {
     if (snapshot?.hold?.state !== 'held') {
@@ -250,7 +251,7 @@ export default function PagoScreen() {
       performance.now() +
       observedHoldSeconds(snapshot) * 1000;
 
-    const expires = snapshot.hold.expires_at;
+    const expires = Date.parse(snapshot.hold.expires_at);
 
     const at =
       deadline.current?.expires === expires
@@ -291,114 +292,58 @@ export default function PagoScreen() {
     }
   }
 
-  // Operación original contra el simulador.
-  // El escenario solicitado es siempre aprobado.
+  const unavailable = (!!snapshot && !mode) || simulated?.enabled === false ||
+    (!!mode && checkout.error instanceof ApiError && checkout.error.status === 404);
+  const amount = expected ?? current?.amount;
+  const expiresAt = snapshot?.hold ? Date.parse(snapshot.hold.expires_at) : null;
+  const matchingHold = expiresAt !== null && checkoutData && checkoutData.expires_at !== null &&
+    Date.parse(checkoutData.expires_at) === expiresAt;
+  const holdActive = !!matchingHold && snapshot?.reservation.status === 'held' &&
+    snapshot.hold?.state === 'held' && seconds > 0;
+  const canChoose = !!current?.can_choose && !!amount && holdActive && !unavailable && !busy;
+  const canConfirm = !!current?.can_confirm && holdActive;
+
   async function submit() {
-    if (
-      !user ||
-      !id ||
-      !method ||
-      sending.current ||
-      !current?.can_choose ||
-      !snapshot ||
-      seconds <= 0 ||
-      snapshot.reservation.status !== 'held'
-    ) {
+    if (!user || !id || !method || !mode || !canChoose || sending.current) return;
+    if (Date.now() < retryAt.current) {
+      setNotice('Espera antes de reintentar la selección.');
       return;
     }
 
-    const choice: DemoChoice =
-      method === 'cash'
-        ? { method: 'cash' }
-        : {
-            method: 'card',
-            scenario: 'approved',
-          };
-
-    const scope =
-      'tekora.mobile.demo-checkout.' +
-      user.id +
-      '.' +
-      id;
-
+    const scope = 'tekora.mobile.' + (mode === 'integrated' ? 'checkout.' : 'demo-checkout.') + user.id + '.' + id;
+    const choice = method === 'card' ? { method, scenario: 'approved' as const } : { method };
     sending.current = true;
     setBusy(true);
     setNotice(undefined);
-
     try {
-      const key = await commandIntent(
-        scope,
-        choice
-      );
-
-      const response = await submitDemoCheckout(
-        api,
-        id,
-        choice,
-        key
-      );
-
+      const key = await commandIntent(scope, mode === 'integrated' ? { method } : choice);
+      if (!deadline.current || performance.now() >= deadline.current.at) {
+        setNotice('El plazo de retención terminó.');
+        return;
+      }
+      const response = mode === 'integrated' && quoteId && expected
+        ? await submitIntegratedCheckout(api, id, quoteId, expected, method, key)
+        : mode === 'local' ? await submitDemoCheckout(api, id, choice, key) : null;
+      if (!response) throw new ApiError(0, 'invalid_response', 'No se pudo verificar la cotización de la reserva.');
       await finishCommandIntent(scope);
-
-      setResult(response);
-
-      setNotice(
-        presentCheckoutLabel(response.status)
-      );
-
-      // Limpiar los campos visuales.
-      setCardName('');
-      setCardNumber('');
-      setCardExpiry('');
-      setCardCvv('');
-
-      checkout.retry();
-      context.retry();
+      setNotice(presentCheckoutLabel(response.status));
     } catch (error) {
-      if (
-        error instanceof ApiError &&
-        [409, 422].includes(error.status)
-      ) {
+      if (error instanceof ApiError && [409, 422].includes(error.status)) {
         await finishCommandIntent(scope);
       }
-
-      const uncertain =
-        !(error instanceof ApiError) ||
-        error.status >= 500 ||
-        [
-          'network',
-          'invalid_response',
-        ].includes(error.code);
-
-      setNotice(
-        uncertain
-          ? 'No se pudo verificar el resultado. Actualiza el estado antes de volver a intentarlo.'
-          : errorMessage(error)
-      );
-
+      retryAt.current = retryDeadline(error);
+      const uncertain = !(error instanceof ApiError) || error.status >= 500 ||
+        ['network', 'invalid_response', 'intent_pending'].includes(error.code);
+      setNotice(uncertain
+        ? 'No se pudo verificar el resultado. Actualiza el estado antes de reintentar con la misma selección.'
+        : errorMessage(error));
+    } finally {
       checkout.retry();
       context.retry();
-    } finally {
       sending.current = false;
       setBusy(false);
     }
   }
-
-  const demoUnavailable =
-    checkout.error instanceof ApiError &&
-    checkout.error.status === 404;
-
-  const amount =
-    snapshot?.amount ??
-    current?.amount;
-
-  const canChoose =
-    !!current?.can_choose &&
-    !!amount &&
-    !!snapshot?.hold &&
-    snapshot.hold.state === 'held' &&
-    seconds > 0 &&
-    !busy;
 
   const chosen = method !== null;
 
@@ -477,7 +422,7 @@ export default function PagoScreen() {
           </Text>
         )}
 
-        {demoUnavailable && (
+        {unavailable && (
           <View style={styles.noteCard}>
             <Ionicons
               name="lock-closed-outline"
@@ -491,14 +436,13 @@ export default function PagoScreen() {
               </Text>
 
               <Text style={styles.muted}>
-                Este entorno no tiene habilitado
-                el procesamiento de pagos.
+                El checkout de prueba no está disponible para esta reserva.
               </Text>
             </View>
           </View>
         )}
 
-        {!demoUnavailable && (
+        {mode && !unavailable && (
           <ApiState {...checkout} />
         )}
 
@@ -631,7 +575,7 @@ export default function PagoScreen() {
           )}
 
         {/* Métodos disponibles */}
-        {current?.can_choose && amount && (
+        {current?.can_choose && amount && !unavailable && (
           <View style={styles.methods}>
             <Text style={styles.sectionTitle}>
               Selecciona un método
@@ -648,8 +592,8 @@ export default function PagoScreen() {
             >
               <Option
                 icon="card-outline"
-                title="Tarjeta bancaria"
-                description="Continuar con tarjeta"
+                title="Tarjeta de prueba"
+                description="Usar la tarjeta ficticia de Tekora"
                 selected={method === 'card'}
                 onPress={() => setMethod('card')}
                 disabled={!canChoose}
@@ -676,7 +620,7 @@ export default function PagoScreen() {
                   />
 
                   <Text style={styles.sectionTitle}>
-                    Datos de tarjeta
+                    Datos de tarjeta ficticia
                   </Text>
                 </View>
 
@@ -690,13 +634,11 @@ export default function PagoScreen() {
                   <TextInput
                     accessibilityLabel="Titular ficticio"
                     style={styles.demoInput}
-                    placeholder="NOMBRE DEL TITULAR"
+                    placeholder="TITULAR DE PRUEBA"
                     placeholderTextColor={colors.muted}
-                    value={cardName}
-                    onChangeText={setCardName}
                     autoCapitalize="characters"
                     autoComplete="off"
-                    editable={canChoose}
+                    editable={false}
                   />
                 </View>
 
@@ -710,11 +652,9 @@ export default function PagoScreen() {
                     style={styles.demoInput}
                     placeholder="4242 4242 4242 4242"
                     placeholderTextColor={colors.muted}
-                    value={cardNumber}
-                    onChangeText={setCardNumber}
                     keyboardType="number-pad"
                     autoComplete="off"
-                    editable={canChoose}
+                    editable={false}
                   />
                 </View>
 
@@ -729,10 +669,8 @@ export default function PagoScreen() {
                       style={styles.demoInput}
                       placeholder="12/30"
                       placeholderTextColor={colors.muted}
-                      value={cardExpiry}
-                      onChangeText={setCardExpiry}
                       autoComplete="off"
-                      editable={canChoose}
+                      editable={false}
                     />
                   </View>
 
@@ -746,12 +684,10 @@ export default function PagoScreen() {
                       style={styles.demoInput}
                       placeholder="123"
                       placeholderTextColor={colors.muted}
-                      value={cardCvv}
-                      onChangeText={setCardCvv}
                       keyboardType="number-pad"
                       secureTextEntry
                       autoComplete="off"
-                      editable={canChoose}
+                      editable={false}
                     />
                   </View>
                 </View>
@@ -800,7 +736,7 @@ export default function PagoScreen() {
         )}
 
         {/* Continuar o regresar */}
-        {current?.can_confirm ? (
+        {canConfirm ? (
           <TouchableOpacity
             accessibilityRole="button"
             style={styles.action}

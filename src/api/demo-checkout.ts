@@ -89,6 +89,8 @@ export function choiceLabel(status: DemoCheckoutStatus): string {
 }
 
 
+export type CheckoutDisplay = Omit<DemoCheckout, 'server_now' | 'expires_at' | 'remaining_seconds'>;
+
 export type QuotePaymentView = { label: string; tone: 'paid' | 'pending' | 'warning' };
 
 /**
@@ -96,7 +98,7 @@ export type QuotePaymentView = { label: string; tone: 'paid' | 'pending' | 'warn
  * Approval is not a real banking transaction; a reserved slot and a simulated
  * success are two different facts. No badge from ambiguous or unbound data.
  */
-export function quotePaymentView(quoteId: string, checkout: DemoCheckout | null): QuotePaymentView | null {
+export function quotePaymentView(quoteId: string, checkout: CheckoutDisplay | null): QuotePaymentView | null {
   if (!checkout || !checkout.synthetic_only || !isUuid(quoteId) || checkout.quote_id !== quoteId) return null;
 
   if (checkout.method === 'card' && checkout.status === 'test_approved' && checkout.selection_verified) {

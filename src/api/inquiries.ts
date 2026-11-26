@@ -1,4 +1,5 @@
 import { ApiError, type ApiClient } from './http';
+import { reservationLabels, type Reservation } from './reservations';
 import { isJourneyCommercial, isUuid, type JourneyCommercial } from './quotes';
 import { isCollection, isRecord, isResource, type Collection, type Resource } from './types';
 
@@ -34,7 +35,7 @@ const actionCodes = [
   'read_history', 'wait_inquiry_decision', 'wait_permissions', 'confirm_reservation',
   'wait_client_confirmation', 'wait_service', 'cancel_expired_proposal', 'wait_schedule_decision',
   'view_review', 'write_review', 'review_quote', 'issue_quote', 'wait_service_availability',
-  'wait_availability', 'propose_schedule',
+  'wait_availability', 'propose_schedule', 'choose_simulated_checkout',
 ] as const;
 type ActionCode = typeof actionCodes[number];
 type JourneyAction = {
@@ -57,7 +58,7 @@ export type ContractingJourney = {
   progress: { current_stage: Stage; steps: { code: Stage; label: string; status: StepState }[]; closed: boolean };
   next_action: JourneyAction;
   commercial: JourneyCommercial & { can_propose: boolean };
-  reservation: { id: number; version: number; actions: string[] } | null;
+  reservation: { id: number; status: Reservation['status']; version: number; actions: string[] } | null;
   confirmation_readiness?: unknown;
   conversation: { can_send: boolean; unread_count: number };
   history: { inquiry: HistoryEvent[]; reservations: HistoryReservation[] };
@@ -125,7 +126,8 @@ function isJourney(value: unknown): value is ContractingJourney {
     isRecord(value.conversation) && typeof value.conversation.can_send === 'boolean' &&
     Number.isSafeInteger(value.conversation.unread_count) && Number(value.conversation.unread_count) >= 0 &&
     (value.reservation === null || (isRecord(value.reservation) && positiveId(value.reservation.id) &&
-      positiveId(value.reservation.version) && Array.isArray(value.reservation.actions) &&
+      positiveId(value.reservation.version) && typeof value.reservation.status === 'string' &&
+      Object.hasOwn(reservationLabels, value.reservation.status) && Array.isArray(value.reservation.actions) &&
       value.reservation.actions.every(action => typeof action === 'string')));
 }
 

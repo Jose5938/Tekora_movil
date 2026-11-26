@@ -425,6 +425,17 @@ function JourneyDetails({
             />
           )}
 
+        {action.code === 'choose_simulated_checkout' && action.interaction === 'navigate' &&
+          action.mobile_execution_available && action.reference.type === 'reservation' &&
+          reference && reference === journey.reservation?.id && journey.reservation.status === 'held' &&
+          readiness?.state === 'simulated_checkout_required' && readiness.reservation_id === reference &&
+          readiness.reservation_version === journey.reservation.version && (
+            <ReservationButton
+              label="Elegir método de pago de prueba"
+              onPress={() => router.push({ pathname: '/tabs/pago', params: { id: reference } })}
+            />
+          )}
+
         {action.interaction === 'navigate' &&
           ![
             'read_history',
@@ -432,6 +443,7 @@ function JourneyDetails({
             'review_quote',
             'propose_schedule',
             'confirm_reservation',
+            'choose_simulated_checkout',
             'write_review',
             'view_review',
           ].includes(action.code) && (

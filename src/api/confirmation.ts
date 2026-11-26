@@ -6,6 +6,7 @@ import { isRecord } from './types';
 export const readinessLabels = {
   awaiting_provider: 'En espera de aceptación del prestador',
   ready: 'El horario está retenido. Falta confirmar la contratación.',
+  simulated_checkout_required: 'Elige un método de pago de prueba antes de confirmar la reserva.',
   web_checkout_required: 'Esta reserva requiere un paso fuera de la app.',
   hold_expired: 'El plazo de retención terminó.',
   hold_released: 'El horario retenido fue liberado.',
@@ -21,6 +22,7 @@ type ReadinessState = keyof typeof readinessLabels;
 type Readiness = {
   state: ReadinessState; can_offer_mobile_confirmation: boolean;
   reservation_id: number; reservation_version: number; observed_at: string;
+  simulated_checkout_required?: true;
 };
 const positive = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 
@@ -29,6 +31,9 @@ export function readReadiness(value: unknown): Readiness | null {
     value.can_offer_mobile_confirmation !== (value.state === 'ready') || value.advisory_only !== true ||
     !positive(value.reservation_id) || !positive(value.reservation_version) || typeof value.observed_at !== 'string' ||
     !Number.isFinite(Date.parse(value.observed_at))) return null;
+  if (value.simulated_checkout_required !== undefined && value.simulated_checkout_required !== true) return null;
+  if (value.state === 'simulated_checkout_required' && (value.simulated_checkout_required !== true ||
+    !Array.isArray(value.blocking_reasons) || !value.blocking_reasons.includes('simulated_checkout_required'))) return null;
   if (value.state === 'ready' && (!(value.synthetic_web_requirement === 'not_applicable' || value.synthetic_web_requirement === 'satisfied') ||
     !Array.isArray(value.blocking_reasons) || value.blocking_reasons.length > 0)) return null;
   return value as Readiness;

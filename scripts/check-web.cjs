@@ -8,6 +8,8 @@ const { inquiry, journey, collection } = require('../tests/fixtures/inquiries.cj
 const { id: quoteId, getQuote, getQuoteJourney } = require('../tests/fixtures/quotes.cjs');
 const { availability, options, getReservation, getContext, getReservationJourney } = require('../tests/fixtures/reservations.cjs');
 const { instant, conversation, notification, cursor, readToken, ownMessage, messagePage } = require('../tests/fixtures/communications.cjs');
+const port = Number(process.env.TEKORA_WEB_PREVIEW_PORT || 18080);
+const origin = `http://127.0.0.1:${port}`;
 const root = resolve(process.env.TEKORA_WEB_PREVIEW_DIR || 'work/10a-web-preview');
 const evidence = resolve(process.env.TEKORA_BROWSER_EVIDENCE_DIR || 'work/10a-browser-evidence');
 mkdirSync(evidence, { recursive: true });
@@ -30,13 +32,18 @@ let quotePhase=false, quoteIssued=false, quoteAccepted=false, acceptancePosts=0;
 const issueKeys=[];
 let reservationStatus=null, proposals=0, cancellations=0, readinessState='web_checkout_required';
 const commitKeys=[];
+const checkoutKeys=[];
+const checkoutMethod=process.env.TEKORA_CHECKOUT_METHOD==='cash'?'cash':'card';
+let checkoutAttempt=null;
+let integratedCheckout=false;
+const demoRequests=[];
 const proposalKeys=[];
 let messagesRead=false, messageSent=false, noticeRead=false;
 const messageKeys=[];
 const requests=[];
 const results=[];
 (async () => {
-  await new Promise(done=>server.listen(18080,'127.0.0.1',done));
+  await new Promise(done=>server.listen(port,'127.0.0.1',done));
   const browser=await chromium.launch({...(process.env.TEKORA_CHROMIUM_PATH ? { executablePath: process.env.TEKORA_CHROMIUM_PATH } : {}),headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   let page;
   const errors=[];
@@ -44,6 +51,9 @@ const results=[];
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
     page=await context.newPage();
     page.on('pageerror',error=>errors.push(error.message));
+    page.on('request',request=>{
+      if(new URL(request.url()).pathname.endsWith('/demo-checkout')) demoRequests.push(request.method());
+    });
     let redirectRequests = 0;
     await page.route('http://127.0.0.1:18013/downgraded', async route => {
       redirectRequests++;
@@ -62,7 +72,7 @@ const results=[];
         assert.ok(input.device_name.length<=80);
         if(input.password==='redirect') {
           await route.fulfill({status:307,headers:{
-            'Access-Control-Allow-Origin':'http://127.0.0.1:18080',
+            'Access-Control-Allow-Origin':origin,
             Location:'http://127.0.0.1:18013/downgraded',
           }});
           return;
@@ -151,9 +161,41 @@ const results=[];
           status=201;body={data:getReservation()};
         }
       }
+      else if(path==='/reservations/17/checkout') {
+        assert.ok(request.headers().authorization);
+        assert.equal(new URL(request.url()).search,'');
+        const {hold,server_now}=getContext('held');
+        if(request.method()==='POST') {
+          assert.equal(reservationStatus,'held');
+          const payload=request.postDataJSON();
+          assert.deepEqual(Object.keys(payload).sort(),checkoutMethod==='card'
+            ? ['idempotency_key','instrument','method'] : ['idempotency_key','method']);
+          assert.equal(payload.method,checkoutMethod);
+          if(checkoutMethod==='card') assert.equal(payload.instrument,'tekora-test-card');
+          assert.match(payload.idempotency_key,/^[0-9a-f-]{36}$/i);
+          checkoutKeys.push(payload.idempotency_key);
+          if(checkoutKeys.length===1) {
+            status=503;body=error('temporarily_unavailable','Resultado de prueba incierto.');
+          } else {
+            checkoutAttempt={reservation_id:17,quote_id:quoteId,method:checkoutMethod,
+              status:checkoutMethod==='card'?'test_approved':'awaiting_cash',
+              reference:'badc4e56-4ab1-4e93-8a49-3f3848852519',currency:'MXN',
+              amount_cents:100000,commission_cents:15000,provider_cents:85000,
+              attempted_at:server_now,received_at:null,synthetic_only:true};
+            body={data:checkoutAttempt};
+            readinessState='ready';
+          }
+        } else {
+          assert.equal(request.method(),'GET');
+          body={data:{reservation_id:17,attempt:checkoutAttempt,synthetic_only:true,
+            can_choose:reservationStatus==='held'&&!checkoutAttempt,can_confirm:reservationStatus==='held'&&!!checkoutAttempt,
+            server_now,expires_at:hold.expires_at}};
+        }
+      }
       else if(path==='/reservations/17/commit') {
         assert.ok(request.headers().authorization);
         assert.equal(request.method(),'PATCH');
+        assert.ok(checkoutAttempt,'B2 requiere selección integrada válida');
         const { idempotency_key, ...intent }=request.postDataJSON();
         assert.match(idempotency_key,/^[0-9a-f-]{36}$/i);
         assert.deepEqual(intent,{version:8});
@@ -178,7 +220,7 @@ const results=[];
         assert.ok(request.headers().authorization);
         if(path==='/reservations') body={data:reservationStatus?[getReservation(reservationStatus)]:[],
           meta:{...collection.meta,total:reservationStatus?1:0}};
-        else body={data:path.endsWith('/checkout-context')?getContext(reservationStatus,readinessState):getReservation(reservationStatus)};
+        else body={data:path.endsWith('/checkout-context')?getContext(reservationStatus,readinessState,integratedCheckout):getReservation(reservationStatus)};
       }
       else if(path==='/inquiries/42/quotes') {
         assert.ok(request.headers().authorization);
@@ -212,7 +254,7 @@ const results=[];
           status=503;body=error('temporarily_unavailable','No se puede consultar el seguimiento.');
         } else if (!quotePhase) body={data:path.endsWith('/journey')?journey:inquiry};
         else body={data:path.endsWith('/journey')?
-          (reservationStatus?getReservationJourney(reservationStatus,readinessState):getQuoteJourney(quoteIssued?getQuote(quoteAccepted?'accepted':'pending'):null,quoteAccepted)):
+          (reservationStatus?getReservationJourney(reservationStatus,readinessState,integratedCheckout):getQuoteJourney(quoteIssued?getQuote(quoteAccepted?'accepted':'pending'):null,quoteAccepted)):
           {...inquiry,status:'accepted',accepted_at:inquiry.created_at}};
       }
       else if(mode==='offline') {await route.abort('failed');return;}
@@ -220,7 +262,7 @@ const results=[];
       else if(path==='/services' && mode==='malformed') body={data:{...service},meta};
       else if(path==='/services' && mode==='unavailable') {
         await route.fulfill({status:503,contentType:'text/html',body:'<p>Unavailable</p>',
-          headers:{'Retry-After':'2','Access-Control-Allow-Origin':'http://127.0.0.1:18080','Access-Control-Expose-Headers':'Retry-After'}});
+          headers:{'Retry-After':'2','Access-Control-Allow-Origin':origin,'Access-Control-Expose-Headers':'Retry-After'}});
         return;
       }
       else if(path==='/services') body={data:mode==='empty'?[]:[service],meta:{...meta,total:mode==='empty'?0:1}};
@@ -243,16 +285,16 @@ const results=[];
     const signIn=async password=>{
       await page.getByLabel('Correo electrónico',{exact:true}).fill('cliente@example.test');
       await page.getByLabel('Contraseña',{exact:true}).fill(password);
-      await page.getByRole('button',{name:'Iniciar sesión',exact:true}).click();
+      await page.getByRole('button',{name:/^Iniciar sesión/}).click();
     };
     for (const path of ['/tabs/cuenta','/tabs/chat','/tabs/reserva','/tabs/pago','/tabs/solicitud?id=42']) {
-      await page.goto('http://127.0.0.1:18080'+path);
-      await visible('Te damos la bienvenida a Tekora');
+      await page.goto(origin+path);
+      await visible('Accede a tu cuenta');
     }
-    await visible('Te damos la bienvenida a Tekora');
+    await visible('Accede a tu cuenta');
     assert.equal(await page.getByText('Mi cuenta',{exact:true}).count(),0);
     results.push('Acceso directo privado sin sesión redirige a login sin identidad privada.');
-    await page.getByRole('button',{name:'Iniciar sesión',exact:true}).click();
+    await page.getByRole('button',{name:/^Iniciar sesión/}).click();
     await visible('Ingresa un correo electrónico válido.');
     assert.equal(logins,0);
     await signIn('incorrecta');
@@ -270,6 +312,10 @@ const results=[];
     await signIn('válida-sintética');
     await visible('Expertos publicados');
     await visible('Prestador de prueba');
+    if(checkoutMethod==='cash') {
+      await page.getByRole('button',{name:'Activar modo oscuro',exact:true}).click();
+      await page.getByRole('button',{name:'Activar modo claro',exact:true}).waitFor();
+    }
     await page.screenshot({path:join(evidence,'inicio-catalogo.png'),fullPage:true});
     const browserStorage=await page.evaluate(()=>({local:Object.keys(localStorage),session:Object.keys(sessionStorage),cookies:document.cookie}));
     assert.deepEqual(browserStorage,{local:[],session:[],cookies:''});
@@ -427,8 +473,30 @@ const results=[];
     await visible('Esta reserva requiere un paso fuera de la app.');
     assert.equal(await page.getByRole('button',{name:'Revisar confirmación',exact:true}).count(),0);
     assert.equal(commitKeys.length,0);
-    readinessState='ready';
+    assert.equal(await page.getByRole('button',{name:'Elegir método de pago de prueba',exact:true}).count(),0);
+    integratedCheckout=true;
+    readinessState='simulated_checkout_required';
     await page.getByRole('button',{name:'Actualizar reserva',exact:true}).click();
+    await page.getByRole('button',{name:'Elegir método de pago de prueba',exact:true}).waitFor();
+    await page.getByRole('button',{name:'Ver solicitud',exact:true}).click();
+    await visible('Seguimiento');
+    await page.getByRole('button',{name:'Elegir método de pago de prueba',exact:true}).click();
+    await page.getByRole('radio',{name:checkoutMethod==='card'?'Tarjeta de prueba':'Efectivo',exact:true}).click();
+    if(checkoutMethod==='card') {
+      assert.equal(await page.getByLabel('Número ficticio',{exact:true}).isEditable(),false);
+      assert.equal(await page.getByLabel('Código ficticio',{exact:true}).isEditable(),false);
+    }
+    await page.screenshot({path:join(evidence,'checkout-'+checkoutMethod+'.png')});
+    const selectPayment=()=>page.getByRole('button',{name:/Continuar con el método/}).click();
+    await selectPayment();
+    await visible('No se pudo verificar el resultado. Actualiza el estado antes de reintentar con la misma selección.');
+    await selectPayment();
+    await visible(checkoutMethod==='card'?'Tarjeta de prueba autorizada':'Método en efectivo registrado');
+    assert.equal(checkoutKeys.length,2);
+    assert.equal(checkoutKeys[0],checkoutKeys[1]);
+    assert.equal(commitKeys.length,0);
+    await page.getByRole('button',{name:/Volver y confirmar reserva/}).click();
+    results.push('V8.1.10 abre checkout desde Seguimiento, envía '+checkoutMethod+' con el contrato sintético y reintenta un 503 con el mismo UUID.');
     await page.getByRole('button',{name:'Revisar confirmación',exact:true}).click();
     assert.equal(commitKeys.length,0);
     await page.getByRole('button',{name:'Confirmar contratación',exact:true}).click();
@@ -442,17 +510,24 @@ const results=[];
     assert.equal(commitKeys[0],commitKeys[1]);
     results.push('B2 bloquea el requisito web, confirma explícitamente con ambas lecturas y conserva UUID tras 503.');
 
+    await page.getByRole('button',{name:'Ver solicitud',exact:true}).click();
+    await visible(checkoutMethod==='card'?'Pagado (prueba)':'Efectivo pendiente');
+    await page.getByRole('button',{name:'Ver comprobante interno de prueba',exact:true}).click();
+    await visible('Comprobante de demostración');
+    await page.getByLabel('Volver',{exact:true}).click();
+    await visible('Reserva confirmada');
+    results.push('La cotización de la reserva confirmada muestra el comprobante interno con el estado correcto.');
+
     await page.getByRole('button',{name:'Cancelar reserva',exact:true}).click();
     assert.equal(cancellations,0);
     await page.getByRole('button',{name:'Confirmar cancelación',exact:true}).click();
     await visible('Reserva cancelada');
     assert.equal(cancellations,1);
-    await page.getByLabel('Volver',{exact:true}).click();
-    await page.getByLabel('Volver',{exact:true}).click();
-    await visible('Mis solicitudes');
+    await page.getByLabel('Ir a inicio',{exact:true}).click();
+    await visible('Expertos publicados');
     results.push('Horario publicado, propuesta con UUID estable tras 503, retención y cancelación con la versión de reserva.');
 
-    await page.getByText('Mensajes',{exact:true}).click();
+    await page.getByRole('tab',{name:'Mensajes',exact:true}).click();
     await visible('Actualizar conversaciones');
     assert.equal(messagesRead,false);
     await page.getByRole('button',{name:/Soporte de computadoras.*Solicitud #42/}).click();
@@ -498,19 +573,19 @@ const results=[];
     await visible('cliente@example.test');
     await page.screenshot({path:join(evidence,'cuenta.png'),fullPage:true});
     await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
-    await visible('Te damos la bienvenida a Tekora');
+    await visible('Accede a tu cuenta');
     assert.equal(logouts,1);
     assert.ok(requests.filter(r=>r.path==='/auth/logout').every(r=>r.hasBearer));
     results.push('Cuenta usa identidad real; logout envía POST Bearer.');
     await signIn('short-session');
     await visible('Expertos publicados');
-    await visible('Te damos la bienvenida a Tekora');
+    await visible('Accede a tu cuenta');
     await visible('Tu sesión expiró. Inicia sesión de nuevo.');
     results.push('Expiración con pantalla abierta vuelve a login.');
     await signIn('válida-sintética');
     await visible('Expertos publicados');
     await page.reload();
-    await visible('Te damos la bienvenida a Tekora');
+    await visible('Accede a tu cuenta');
     results.push('Recargar vista web exige login, sin almacenamiento inseguro.');
     await page.setViewportSize({width:320,height:720});
     await signIn('válida-sintética');
@@ -525,6 +600,7 @@ const results=[];
     results.push('Inicio enlaza al historial, con navegación accesible y sin desbordamiento horizontal a 320 px.');
 
     assert.ok(requests.filter(r=>r.method==='GET'&&(r.path.startsWith('/services')||r.path.startsWith('/providers'))).every(r=>!r.hasBearer));
+    assert.deepEqual(demoRequests,[]);
     assert.deepEqual(errors,[]);
     writeFileSync(join(evidence,'results.json'),JSON.stringify({results,requests,consolePageErrors:errors},null,2));
     console.log(JSON.stringify({passed:results.length,results,consolePageErrors:errors},null,2));

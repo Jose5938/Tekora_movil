@@ -26,6 +26,7 @@
     "../src/api/catalog.ts",
     "../src/api/identity.ts",
     "../src/api/profile.ts",
-    "../src/api/reviews.ts"
+    "../src/api/reviews.ts",
+    "../src/api/integrated-checkout.ts"
   ]
 }

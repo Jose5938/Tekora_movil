@@ -356,11 +356,11 @@ test('HTTP explícito admite loopback y LAN privada literal; excluye hosts públ
       assert.equal(url, `${base}/auth/login`);
       assert.equal(init.redirect, 'error');
       return json({ data: loginData }, 201);
-    }, true);
+    }, { allowLocalHttp: true });
     await api.request('/auth/login', { method: 'POST', body: { password: 'fixture' } });
   }
   for (const host of ['localhost.example.test', '192.168.1.20.example.test', '172.32.0.2', '8.8.8.8']) {
-    const api = new ApiClient(() => `http://${host}/api/v1`, async () => assert.fail('invocó el transporte'), true);
+    const api = new ApiClient(() => `http://${host}/api/v1`, async () => assert.fail('invocó el transporte'), { allowLocalHttp: true });
     await assert.rejects(api.request('/auth/login', { method: 'POST', body: { password: 'fixture' } }), { code: 'insecure_transport' });
   }
 });

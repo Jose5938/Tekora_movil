@@ -28,6 +28,8 @@ export type Hold = { state: 'held' | 'committed' | 'expired' | 'released'; versi
 export type ReservationContext = {
   reservation: ReservationIdentity; client: { id: number }; service: { id: number; title: string };
   amount: Amount | null; server_now: string; hold: Hold | null; confirmation_readiness?: unknown;
+  quote?: { id: string } | null;
+  simulated_checkout?: { required: true; enabled: boolean; synthetic_only: true };
 };
 
 const positive = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
@@ -84,7 +86,10 @@ function isHold(value: unknown): value is Hold {
 function isContext(value: unknown): value is ReservationContext {
   return isRecord(value) && isIdentity(value.reservation) && isRecord(value.client) && positive(value.client.id) &&
     isRecord(value.service) && positive(value.service.id) && typeof value.service.title === 'string' &&
-    (value.amount === null || isAmount(value.amount)) && instant(value.server_now) && (value.hold === null || isHold(value.hold));
+    (value.amount === null || isAmount(value.amount)) && instant(value.server_now) && (value.hold === null || isHold(value.hold)) &&
+    (value.simulated_checkout === undefined || (isRecord(value.simulated_checkout) &&
+      value.simulated_checkout.required === true && value.simulated_checkout.synthetic_only === true &&
+      typeof value.simulated_checkout.enabled === 'boolean' && isRecord(value.quote) && isUuid(value.quote.id)));
 }
 export const isContextResource = (value: unknown): value is Resource<ReservationContext> => isResource(value, isContext);
 

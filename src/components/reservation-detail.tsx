@@ -491,8 +491,8 @@ export function ReservationDetail({
           {reservation.commercial_protocol &&
             observed?.hold?.state === 'held' &&
             (seconds ?? 0) > 0 &&
-            readiness?.state ===
-              'web_checkout_required' && (
+            ((readiness?.state === 'simulated_checkout_required' && observed.simulated_checkout?.enabled === true) ||
+              (readiness?.state === 'web_checkout_required' && api.localDemoCheckoutEnabled)) && (
               <ReservationButton
                 label="Elegir método de pago de prueba"
                 disabled={busy}

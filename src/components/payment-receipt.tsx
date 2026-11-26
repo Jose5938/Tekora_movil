@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { mxn } from '@/api/quotes';
-import { quotePaymentView, type DemoCheckout } from '@/api/demo-checkout';
+import { quotePaymentView, type CheckoutDisplay } from '@/api/demo-checkout';
 
 /** An internal demonstration receipt, never a bank or fiscal document. */
 export function PaymentReceipt({ quoteId, checkout }: {
-  quoteId: string; checkout: DemoCheckout | null;
+  quoteId: string; checkout: CheckoutDisplay | null;
 }) {
   const [open, setOpen] = useState(false);
   const badge = quotePaymentView(quoteId, checkout);
@@ -46,8 +46,7 @@ export function PaymentReceipt({ quoteId, checkout }: {
       {cancelled && <Text style={styles.warning}>Reserva cancelada. Se conserva el resultado de prueba histórico; no se ha registrado ningún reembolso.</Text>}
       <View style={styles.footer}>
         <Ionicons name="shield-checkmark-outline" color="#617887" size={17} />
-        <Text style={styles.disclaimer}>Solo demostración local. No es comprobante bancario ni fiscal;
-          no se movió dinero real.</Text>
+        <Text style={styles.disclaimer}>Comprobante interno de demostración. La simulación no mueve dinero.</Text>
       </View>
     </View>}
   </View>;
