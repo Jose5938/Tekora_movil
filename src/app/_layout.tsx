@@ -3,6 +3,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { SessionProvider, useSession } from '@/auth/context';
+import { TekoraThemeProvider } from '@/theme/tekora-theme';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -33,7 +34,11 @@ function SessionRoutes() {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-    <SessionProvider><SessionRoutes /></SessionProvider>
+    <TekoraThemeProvider>
+  <SessionProvider>
+    <SessionRoutes />
+  </SessionProvider>
+</TekoraThemeProvider>
     <AnimatedSplashOverlay />
   </ThemeProvider>;
 }
